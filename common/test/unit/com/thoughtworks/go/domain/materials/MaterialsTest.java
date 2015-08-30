@@ -18,10 +18,7 @@ package com.thoughtworks.go.domain.materials;
 
 import com.googlecode.junit.ext.JunitExtRunner;
 import com.googlecode.junit.ext.RunIf;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.CruiseConfig;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.materials.*;
 import com.thoughtworks.go.config.materials.dependency.DependencyMaterial;
 import com.thoughtworks.go.config.materials.git.GitMaterial;
@@ -166,7 +163,7 @@ public class MaterialsTest {
         pipelineOne.setMaterialConfigs(new MaterialConfigs(materialOne, materialTwo));
 
         MaterialConfigs materials = pipelineOne.materialConfigs();
-        materials.validate(ValidationContext.forChain(config));
+        materials.validate(ConfigSaveValidationContext.forChain(config));
 
         assertThat(materials.get(0).errors().isEmpty(), is(false));
         assertThat(materials.get(1).errors().isEmpty(), is(false));

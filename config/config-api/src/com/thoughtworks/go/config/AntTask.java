@@ -26,10 +26,11 @@ import com.thoughtworks.go.util.FileUtil;
 @ConfigTag("ant")
 public class AntTask extends BuildTask {
     private final String ANT = "Ant";
+    public static final String TYPE = "ant";
 
     @Override
     public String getTaskType() {
-        return "ant";
+        return TYPE;
     }
 
     public String getTypeForDisplay() {

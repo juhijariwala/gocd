@@ -21,6 +21,7 @@ import java.util.List;
 import com.thoughtworks.go.config.ConfigInterface;
 import com.thoughtworks.go.config.ParamsAttributeAware;
 import com.thoughtworks.go.config.Validatable;
+import com.thoughtworks.go.config.ValidationContext;
 import com.thoughtworks.go.service.TaskFactory;
 
 @ConfigInterface
@@ -42,5 +43,5 @@ public interface Task extends ParamsAttributeAware, Validatable {
     void setConfigAttributes(Object attributes, TaskFactory taskFactory);
 
     boolean hasSameTypeAs(Task task);
-
+    boolean validateTree(ValidationContext validationContext);
 }

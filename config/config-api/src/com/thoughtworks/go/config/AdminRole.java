@@ -95,7 +95,7 @@ public class AdminRole implements Admin {
         if (validationContext.isWithinTemplates()) {
             return;
         }
-        SecurityConfig securityConfig = validationContext.getCruiseConfig().server().security();
+        SecurityConfig securityConfig = validationContext.getServerSecurityConfig();
         if (!securityConfig.isRoleExist(this.name)) {
             configErrors.add(NAME, String.format("Role \"%s\" does not exist!", this.name));
         }

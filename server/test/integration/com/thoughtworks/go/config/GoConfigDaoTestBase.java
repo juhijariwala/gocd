@@ -25,9 +25,14 @@ import com.thoughtworks.go.domain.NullTask;
 import com.thoughtworks.go.helper.ConfigFileFixture;
 import com.thoughtworks.go.helper.PipelineMother;
 import com.thoughtworks.go.helper.StageConfigMother;
+import com.thoughtworks.go.i18n.Localizable;
+import com.thoughtworks.go.server.service.GoConfigService;
+import com.thoughtworks.go.server.service.result.LocalizedOperationResult;
 import com.thoughtworks.go.util.*;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
 
 import java.io.File;
 import java.util.List;
@@ -42,8 +47,7 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 
 public abstract class GoConfigDaoTestBase {
@@ -557,6 +561,42 @@ public abstract class GoConfigDaoTestBase {
         assertThat(updatedConfig.hasPipelineNamed(new CaseInsensitiveString("p2")), is(true));
         assertThat(updatedConfig.mailHost().getHostName(), is("mailhost.local"));
         assertThat(configSaveState, is(ConfigSaveState.MERGED));
+    }
+
+    @Test
+    public void shouldNotUpdateInvalidPipelineConfig(){
+        PipelineConfig pipelineConfig = mock(PipelineConfig.class);
+        when(pipelineConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        LocalizedOperationResult result = mock(LocalizedOperationResult.class);
+        GoConfigService.PermissionChecker permissionChecker = mock(GoConfigService.PermissionChecker.class);
+        when(permissionChecker.canContinue()).thenReturn(true);
+
+        CachedGoConfig cachedConfigService = mock(CachedGoConfig.class);
+        goConfigDao = new GoConfigDao(cachedConfigService, null);
+        goConfigDao.updatePipeline(pipelineConfig, result, permissionChecker);
+
+        ArgumentCaptor<PipelineConfigSaveValidationContext> contextCaptor = ArgumentCaptor.forClass(PipelineConfigSaveValidationContext.class);
+        verify(pipelineConfig).validateTree(contextCaptor.capture());
+        assertThat(contextCaptor.getValue().getPipeline(), is(pipelineConfig));
+        verify(result).notAcceptable(Matchers.<Localizable>any());
+        verifyZeroInteractions(cachedConfigService);
+    }
+    
+    @Test
+    public void shouldUpdateValidPipelineConfig(){
+        PipelineConfig pipelineConfig = mock(PipelineConfig.class);
+        when(pipelineConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        LocalizedOperationResult result = mock(LocalizedOperationResult.class);
+        GoConfigService.PermissionChecker permissionChecker = mock(GoConfigService.PermissionChecker.class);
+        when(permissionChecker.canContinue()).thenReturn(true);
+
+        CachedGoConfig cachedConfigService = mock(CachedGoConfig.class);
+        goConfigDao = new GoConfigDao(cachedConfigService, null);
+        goConfigDao.updatePipeline(pipelineConfig, result, permissionChecker);
+
+        verify(pipelineConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verifyZeroInteractions(result);
+        verify(cachedConfigService).writePipelineWithLock(pipelineConfig);
     }
 
     private void assertCurrentConfigIs(CruiseConfig cruiseConfig) throws Exception {

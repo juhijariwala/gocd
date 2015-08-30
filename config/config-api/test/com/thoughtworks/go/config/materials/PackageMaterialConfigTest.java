@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.materials.git.GitMaterialConfig;
 import com.thoughtworks.go.domain.config.Configuration;
 import com.thoughtworks.go.domain.packagerepository.ConfigurationPropertyMother;
@@ -41,7 +41,7 @@ public class PackageMaterialConfigTest {
     @Test
     public void shouldAddErrorIfMaterialDoesNotHaveAPackageId() throws Exception {
         PackageMaterialConfig packageMaterialConfig = new PackageMaterialConfig();
-        packageMaterialConfig.validateConcreteMaterial(new ValidationContext(null, null));
+        packageMaterialConfig.validateConcreteMaterial(new ConfigSaveValidationContext(null, null));
 
         assertThat(packageMaterialConfig.errors().getAll().size(), is(1));
         assertThat(packageMaterialConfig.errors().on(PackageMaterialConfig.PACKAGE_ID), is("Please select a repository and package"));

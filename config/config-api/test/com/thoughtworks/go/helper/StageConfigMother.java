@@ -19,21 +19,9 @@ package com.thoughtworks.go.helper;
 import java.util.Arrays;
 import java.util.HashMap;
 
-import com.thoughtworks.go.config.AdminRole;
-import com.thoughtworks.go.config.AdminUser;
-import com.thoughtworks.go.config.AntTask;
-import com.thoughtworks.go.config.Approval;
-import com.thoughtworks.go.config.ArtifactPlan;
-import com.thoughtworks.go.config.ArtifactPlans;
-import com.thoughtworks.go.config.AuthConfig;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ExecTask;
-import com.thoughtworks.go.config.JobConfig;
-import com.thoughtworks.go.config.JobConfigs;
-import com.thoughtworks.go.config.Resource;
-import com.thoughtworks.go.config.Resources;
-import com.thoughtworks.go.config.StageConfig;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.domain.ArtifactType;
+import com.thoughtworks.go.security.GoCipher;
 import com.thoughtworks.go.util.ReflectionUtil;
 
 public class StageConfigMother {
@@ -101,6 +89,13 @@ public class StageConfigMother {
 
     public static StageConfig manualStage(String stageName) {
         return custom(stageName, new Approval());
+    }
+
+    public static StageConfig stageConfigWithEnvironmentVariable(String stageName) {
+        StageConfig stageConfig = StageConfigMother.stageConfig(stageName);
+        stageConfig.setVariables(EnvironmentVariablesConfigMother.environmentVariables());
+        stageConfig.getJobs().add(JobConfigMother.jobConfig());
+        return stageConfig;
     }
 
     public static StageConfig stageConfigWithArtifact(String stageName, String jobName , ArtifactType artifactType){

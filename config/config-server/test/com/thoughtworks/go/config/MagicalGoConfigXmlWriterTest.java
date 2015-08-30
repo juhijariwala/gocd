@@ -425,7 +425,7 @@ public class MagicalGoConfigXmlWriterTest {
         String encryptedPassword = new GoCipher().encrypt("password");
         SvnMaterialConfig material = com.thoughtworks.go.helper.MaterialConfigsMother.svnMaterialConfig("http://user:pass@svn", null, "cruise", "password", false, null);
         assertThat(xmlWriter.toXmlPartial(material), is(
-                "<svn url=\"http://user:pass@svn\" username=\"cruise\" encryptedPassword=\"" + encryptedPassword + "\" />"));
+                "<svn url=\"http://user:pass@svn\" username=\"cruise\" encryptedPassword=\"" + encryptedPassword + "\" materialName=\"http___user_pass@svn\" />"));
     }
 
     @Test

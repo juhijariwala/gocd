@@ -19,7 +19,11 @@ package com.thoughtworks.go.server.materials;
 import com.thoughtworks.go.config.BasicCruiseConfig;
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import com.thoughtworks.go.config.CruiseConfig;
+import com.thoughtworks.go.config.PipelineConfig;
+import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.ScmMaterial;
+import com.thoughtworks.go.config.materials.git.GitMaterial;
+import com.thoughtworks.go.config.materials.git.GitMaterialConfig;
 import com.thoughtworks.go.config.materials.svn.SvnMaterial;
 import com.thoughtworks.go.config.materials.svn.SvnMaterialConfig;
 import com.thoughtworks.go.domain.PipelineGroups;
@@ -44,6 +48,7 @@ import com.thoughtworks.go.serverhealth.*;
 import com.thoughtworks.go.util.ProcessManager;
 import com.thoughtworks.go.util.ReflectionUtil;
 import com.thoughtworks.go.util.SystemEnvironment;
+import com.thoughtworks.go.utils.Timeout;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -302,6 +307,19 @@ public class MaterialUpdateServiceTest {
         when(serverHealthService.getAllLogs()).thenReturn(new ServerHealthStates());
         service.onTimer();
         service.onConfigChange(mock(BasicCruiseConfig.class));
+        service.onTimer();
+        verify(goConfigService, times(2)).getSchedulableMaterials();
+    }
+
+    @Test
+    public void shouldClearSchedulableMaterialCacheOnPipelineConfigChange() {
+        when(serverHealthService.getAllLogs()).thenReturn(new ServerHealthStates());
+        when(goConfigService.getCurrentConfig()).thenReturn(mock(CruiseConfig.class));
+        service.onTimer();
+        PipelineConfig pipelineConfig = mock(PipelineConfig.class);
+        when(pipelineConfig.materialConfigs()).thenReturn(new MaterialConfigs(new GitMaterialConfig("url")));
+
+        service.onPipelineConfigChange(pipelineConfig, "g1");
         service.onTimer();
         verify(goConfigService, times(2)).getSchedulableMaterials();
     }

@@ -27,6 +27,7 @@ import com.thoughtworks.go.listener.ConfigChangedListener;
 import com.thoughtworks.go.serverhealth.HealthStateType;
 import com.thoughtworks.go.serverhealth.ServerHealthService;
 import com.thoughtworks.go.serverhealth.ServerHealthState;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -142,6 +143,11 @@ public class MergedGoConfig implements CachedGoConfig, ConfigChangedListener, Pa
 
     public synchronized ConfigSaveState writeWithLock(UpdateConfigCommand updateConfigCommand) {
         return this.fileService.writeWithLock(updateConfigCommand,new GoConfigHolder(this.currentConfig,this.currentConfigForEdit));
+    }
+
+    @Override
+    public synchronized void writePipelineWithLock(PipelineConfig pipelineConfig) {
+        fileService.writePipelineWithLock(pipelineConfig);
     }
 
     private synchronized void saveValidConfigToCache(GoConfigHolder configHolder) {

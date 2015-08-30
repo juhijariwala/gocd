@@ -63,6 +63,10 @@ public class PluggableTask extends AbstractTask {
         return pluginConfiguration;
     }
 
+    public void setPluginConfiguration(PluginConfiguration pluginConfiguration) {
+        this.pluginConfiguration = pluginConfiguration;
+    }
+
     public Configuration getConfiguration() {
         return configuration;
     }

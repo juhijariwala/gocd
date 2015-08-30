@@ -71,10 +71,10 @@ public class GoConfigGraphWalker {
     }
 
     public void walk(Handler handler) {
-        walkSubtree(this.rootValidatable, new ValidationContext(null), handler);
+        walkSubtree(this.rootValidatable, new ConfigSaveValidationContext(null), handler);
     }
 
-    private void walkSubtree(Object current, ValidationContext context, Handler handler) {
+    private void walkSubtree(Object current, ConfigSaveValidationContext context, Handler handler) {
         WalkedObject walkedObject = new WalkedObject(current);
         if (!walkedObject.shouldWalk()) {
             return;
@@ -88,7 +88,7 @@ public class GoConfigGraphWalker {
         walkFields(current, context, handler);
     }
 
-    private void walkFields(Object current, ValidationContext ctx, Handler handler) {
+    private void walkFields(Object current, ConfigSaveValidationContext ctx, Handler handler) {
         for (Field field : getAllFields(current.getClass())) {
             field.setAccessible(true);
             try {
@@ -113,7 +113,7 @@ public class GoConfigGraphWalker {
         return Modifier.isStatic(modifiers) || Modifier.isFinal(modifiers);
     }
 
-    private void walkCollection(Object current, ValidationContext ctx, Handler handler) {
+    private void walkCollection(Object current, ConfigSaveValidationContext ctx, Handler handler) {
         // We can only expect java to honor the contract of datastructure interfaces(read: List),
         // and not depend on how they choose to implement it, so we short-circuit at a level that we know will continue to work(bad, but safe)
         // TODO: do java.util.Map when needed, not handled yet, but its a simple EntrySet walk

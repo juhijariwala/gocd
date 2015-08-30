@@ -53,6 +53,8 @@ public interface MaterialConfig extends Serializable, Validatable {
 
     boolean isAutoUpdate();
 
+    void setAutoUpdate(boolean autoUpdate);
+
     void validateNameUniqueness(Map<CaseInsensitiveString, AbstractMaterialConfig> map);
 
     String getUriForDisplay();

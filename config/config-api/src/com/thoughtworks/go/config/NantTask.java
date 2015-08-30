@@ -31,6 +31,7 @@ public class NantTask extends BuildTask {
     private static final String NANT_EXECUTABLE = "nant";
     public static final String NANT_PATH = "nantPath";
     private final String NANT = "NAnt";
+    public static final String TYPE="nant";
 
     public NantTask() { }
 

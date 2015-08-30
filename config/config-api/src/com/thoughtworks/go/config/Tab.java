@@ -53,6 +53,14 @@ public class Tab implements Validatable {
         return path;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
     public String toString() {
         return "Tab[" + name + ", " + path + "]"; 
     }
@@ -82,6 +90,11 @@ public class Tab implements Validatable {
         result = (name != null ? name.hashCode() : 0);
         result = 31 * result + (path != null ? path.hashCode() : 0);
         return result;
+    }
+
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
     }
 
     public void validate(ValidationContext validationContext) {

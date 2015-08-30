@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.domain.config.Admin;
 import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.helper.StageConfigMother;
@@ -57,8 +58,46 @@ public class ApprovalTest {
         Approval approval = new Approval();
         approval.setConfigAttributes(new SingletonMap(Approval.TYPE, "not-manual-or-success"));
         assertThat(approval.getType(), is("not-manual-or-success"));
-        approval.validate(ValidationContext.forChain(new BasicCruiseConfig(), new BasicPipelineConfigs()));
+        approval.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig(), new BasicPipelineConfigs()));
         assertThat(approval.errors().firstError(), is("You have defined approval type as 'not-manual-or-success'. Approval can only be of the type 'manual' or 'success'."));
+    }
+
+    @Test
+    public void shouldFailValidateWhenUsersWithoutOperatePermissionOnGroupAreAuthorizedToApproveStage_WithPipelineConfigSaveValidationContext() {
+        CruiseConfig cruiseConfig = cruiseConfigWithSecurity(
+                new Role(new CaseInsensitiveString("role"), new RoleUser(new CaseInsensitiveString("first")), new RoleUser(new CaseInsensitiveString("second"))), new AdminUser(
+                        new CaseInsensitiveString("admin")));
+
+        addUserAndRoleToGroup(cruiseConfig, "user", "role");
+        PipelineConfig pipeline = cruiseConfig.find("defaultGroup", 0);
+        StageConfig stage = pipeline.get(0);
+        StageConfigMother.addApprovalWithUsers(stage, "not-present");
+        Approval approval = stage.getApproval();
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        approval.validate(PipelineConfigSaveValidationContext.forChain(pipeline, stage));
+
+        AdminUser user = approval.getAuthConfig().getUsers().get(0);
+        assertThat(user.errors().isEmpty(), is(false));
+        assertThat(user.errors().on("name"), is("User \"not-present\" who is not authorized to operate pipeline group can not be authorized to approve stage"));
+    }
+
+    @Test
+    public void shouldPassValidateWhenNoPermissionAreSetupOnGroupAndUserIsAuthorizedToApproveStage_WithPipelineConfigSaveValidationContext() {
+        CruiseConfig cruiseConfig = cruiseConfigWithSecurity(
+                new Role(new CaseInsensitiveString("role"), new RoleUser(new CaseInsensitiveString("first")), new RoleUser(new CaseInsensitiveString("second"))), new AdminUser(
+                        new CaseInsensitiveString("admin")));
+
+        PipelineConfig pipeline = cruiseConfig.find("defaultGroup", 0);
+        StageConfig stage = pipeline.get(0);
+        StageConfigMother.addApprovalWithUsers(stage, "not-present");
+        Approval approval = stage.getApproval();
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        approval.validate(PipelineConfigSaveValidationContext.forChain(pipeline, stage));
+
+        AdminUser user = approval.getAuthConfig().getUsers().get(0);
+        assertThat(user.errors().isEmpty(), is(true));
     }
 
     @Test
@@ -135,7 +174,7 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithUsers(stage, "not-present");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, group, pipeline, stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, group, pipeline, stage));
 
         AdminUser user = approval.getAuthConfig().getUsers().get(0);
         assertThat(user.errors().isEmpty(), is(false));
@@ -154,7 +193,7 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithRoles(stage, "not-present");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, group, pipeline, stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, group, pipeline, stage));
 
         AdminRole user = approval.getAuthConfig().getRoles().get(0);
         assertThat(user.errors().isEmpty(), is(false));
@@ -165,7 +204,7 @@ public class ApprovalTest {
     public void validate_shouldAllowUserWhoseRoleHasOperatePermission() throws Exception {
         CruiseConfig cruiseConfig = cruiseConfigWithSecurity(
                 new Role(new CaseInsensitiveString("role"), new RoleUser(new CaseInsensitiveString("first")), new RoleUser(new CaseInsensitiveString("second"))), new AdminUser(
-                new CaseInsensitiveString("admin")));
+                        new CaseInsensitiveString("admin")));
 
         PipelineConfigs group = addUserAndRoleToGroup(cruiseConfig, "user", "role");
         PipelineConfig pipeline = cruiseConfig.find("defaultGroup", 0);
@@ -173,7 +212,7 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithUsers(stage, "first");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, group, pipeline, stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, group, pipeline, stage));
 
         AdminUser user = approval.getAuthConfig().getUsers().get(0);
         assertThat(user.errors().isEmpty(), is(true));
@@ -191,7 +230,7 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithUsers(stage, "user");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, group, pipeline, stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, group, pipeline, stage));
 
         AdminUser user = approval.getAuthConfig().getUsers().get(0);
         assertThat(user.errors().isEmpty(), is(true));
@@ -209,7 +248,7 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithUsers(stage, "user");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, group, pipeline, stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, group, pipeline, stage));
 
         AdminUser user = approval.getAuthConfig().getUsers().get(0);
         assertThat(user.errors().isEmpty(), is(true));
@@ -227,7 +266,7 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithUsers(stage, "admin");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, group, pipeline, stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, group, pipeline, stage));
 
         AdminUser user = approval.getAuthConfig().getUsers().get(0);
         assertThat(user.errors().isEmpty(), is(true));
@@ -245,11 +284,27 @@ public class ApprovalTest {
         StageConfigMother.addApprovalWithUsers(stage, "not-present");
         Approval approval = stage.getApproval();
 
-        approval.validate(ValidationContext.forChain(cruiseConfig, new TemplatesConfig(), stage));
+        approval.validate(ConfigSaveValidationContext.forChain(cruiseConfig, new TemplatesConfig(), stage));
         AdminUser user = approval.getAuthConfig().getUsers().get(0);
         assertThat(user.errors().isEmpty(), is(true));
     }
 
+    @Test
+    public void shouldValidateTree(){
+        Approval approval = new Approval(new AuthConfig(new AdminRole(new CaseInsensitiveString("role"))));
+        BasicCruiseConfig cruiseConfig = GoConfigMother.defaultCruiseConfig();
+        cruiseConfig.server().security().adminsConfig().addRole(new AdminRole(new CaseInsensitiveString("super-admin")));
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("p1"), new MaterialConfigs());
+        cruiseConfig.addPipeline("g1", pipelineConfig);
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        assertThat(approval.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig)), is(false));
+        AdminRole role = approval.getAuthConfig().getRoles().get(0);
+        assertThat(role.errors().isEmpty(), is(false));
+        assertThat(role.errors().firstError(), is("Role \"role\" does not exist!"));
+    }
+
+    
     private CruiseConfig cruiseConfigWithSecurity(Role roleDefinition, Admin admins) {
         CruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("pipeline");
         SecurityConfig securityConfig = cruiseConfig.server().security();

@@ -99,6 +99,14 @@ public class ConfigurationProperty implements Serializable, Validatable {
         this.configurationValue = configurationValue;
     }
 
+    public void setConfigurationKey(ConfigurationKey configurationKey) {
+        this.configurationKey = configurationKey;
+    }
+
+    public void setEncryptedConfigurationValue(EncryptedConfigurationValue encryptedValue) {
+        this.encryptedValue = encryptedValue;
+    }
+
     public boolean isSecure() {
         return encryptedValue != null;
     }

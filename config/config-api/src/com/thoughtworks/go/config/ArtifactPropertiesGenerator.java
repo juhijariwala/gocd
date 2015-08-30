@@ -141,6 +141,10 @@ public class ArtifactPropertiesGenerator extends PersistentObject implements Ser
         }
     }
 
+    public boolean validateTree(ValidationContext validationContext) {
+        return true;
+    }
+
     public void validate(ValidationContext validationContext) {
     }
 

@@ -45,4 +45,16 @@ public class TabsTest {
         assertThat(tabs.get(1).errors().on(Tab.NAME), is("Tab name 'tab1' is not unique."));
     }
 
+    @Test
+    public void shouldValidateTree(){
+        Tab tab1 = new Tab("tab1", "path1");
+        Tab tab2 = new Tab("tab1", "path2");
+        Tab tab3 = new Tab("extremely_long_name_that_is_not_allowed", "path");
+        Tabs tabs = new Tabs(tab1, tab2, tab3);
+        tabs.validateTree(null);
+        assertThat(tab1.errors().on(Tab.NAME), is("Tab name 'tab1' is not unique."));
+        assertThat(tab2.errors().on(Tab.NAME), is("Tab name 'tab1' is not unique."));
+        assertThat(tab3.errors().on(Tab.NAME), is("Tab name should not exceed 15 characters"));
+    }
+
 }

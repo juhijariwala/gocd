@@ -22,21 +22,37 @@ import java.util.Stack;
 
 import com.thoughtworks.go.config.CaseInsensitiveString;
 
-import static com.thoughtworks.go.util.ExceptionUtils.bomb;
-
 public class DFSCycleDetector {
-
-    public final void topoSort(CaseInsensitiveString root, Hashtable<CaseInsensitiveString, Node> targetTable) throws Exception {
+    public final void topoSort(final CaseInsensitiveString root, final PipelineDependencyState pipelineDependencyState) throws Exception {
         Hashtable<CaseInsensitiveString, CycleState> state = new Hashtable<CaseInsensitiveString, CycleState>();
         Stack<CaseInsensitiveString> visiting = new Stack<CaseInsensitiveString>();
 
         if (!state.containsKey(root)) {
-            tsort(root, targetTable, state, visiting);
+            tsort(root, pipelineDependencyState, state, visiting);
         } else if (state.get(root) == CycleState.VISITING) {
             throw ExceptionUtils.bomb("Unexpected node in visiting state: " + root);
         }
-
         assertHasVisitedAllNodesInTree(state);
+    }
+
+    private void tsort(final CaseInsensitiveString root, final PipelineDependencyState pipelineDependencyState, final Hashtable<CaseInsensitiveString, CycleState> state, Stack<CaseInsensitiveString> visiting) throws Exception {
+        state.put(root, CycleState.VISITING);
+        visiting.push(root);
+
+        // Make sure we exist
+        validateRootExists(root, pipelineDependencyState, visiting);
+        Node stage = pipelineDependencyState.getDependencyMaterials(root);
+        for (CaseInsensitiveString cur : stage.getDependencies()) {
+            if (!state.containsKey(cur)) {
+                // Not been visited
+                tsort(cur, pipelineDependencyState, state, visiting);
+            } else if (state.get(cur) == CycleState.VISITING) {
+                // Currently visiting this node, so have a cycle
+                throwCircularException(cur, visiting);
+            }
+        }
+        popAndAssertTopIsConsistent(visiting, root);
+        state.put(root, CycleState.VISITED);
     }
 
     private void assertHasVisitedAllNodesInTree(Hashtable<CaseInsensitiveString, CycleState> state) {
@@ -47,28 +63,6 @@ public class DFSCycleDetector {
         }
     }
 
-    private void tsort(CaseInsensitiveString root, Hashtable<CaseInsensitiveString, Node> stageTable,
-                       Hashtable<CaseInsensitiveString, CycleState> state, Stack<CaseInsensitiveString> visiting) throws Exception {
-        state.put(root, CycleState.VISITING);
-        visiting.push(root);
-
-        // Make sure we exist
-        validateRootExists(root, stageTable, visiting);
-
-        Node stage = stageTable.get(root);
-        for (CaseInsensitiveString cur : stage.getDependencies()) {
-            if (!state.containsKey(cur)) {
-                // Not been visited
-                tsort(cur, stageTable, state, visiting);
-            } else if (state.get(cur) == CycleState.VISITING) {
-                // Currently visiting this node, so have a cycle
-                throwCircularException(cur, visiting);
-            }
-        }
-        popAndAssertTopIsConsistent(visiting, root);
-        state.put(root, CycleState.VISITED);
-    }
-
     private void popAndAssertTopIsConsistent(Stack<CaseInsensitiveString> visiting, CaseInsensitiveString root) {
         CaseInsensitiveString p = visiting.pop();
         if (!root.equals(p)) {
@@ -76,8 +70,8 @@ public class DFSCycleDetector {
         }
     }
 
-    private void validateRootExists(CaseInsensitiveString root, Hashtable<CaseInsensitiveString, Node> stageTable, Stack<CaseInsensitiveString> visiting) throws Exception {
-        if (!stageTable.containsKey(root)) {
+    private void validateRootExists(CaseInsensitiveString root, PipelineDependencyState pipelineDependencyState, Stack<CaseInsensitiveString> visiting) throws Exception {
+        if (!pipelineDependencyState.hasPipeline(root)) {
             StringBuffer sb = new StringBuffer("Pipeline \"");
             sb.append(root);
             sb.append("\" does not exist.");

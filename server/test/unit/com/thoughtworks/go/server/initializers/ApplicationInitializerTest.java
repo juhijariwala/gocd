@@ -121,6 +121,8 @@ public class ApplicationInitializerTest {
     private ConsoleService consoleService;
     @Mock
     private ContextRefreshedEvent contextRefreshedEvent;
+    @Mock
+    private PipelineConfigService pipelineConfigService;
 
     @InjectMocks
     ApplicationInitializer initializer = new ApplicationInitializer();
@@ -142,6 +144,11 @@ public class ApplicationInitializerTest {
     @Test
     public void shouldInitializeCcTrayActivityListenerAfterGoConfigServiceAndPipelineSqlMapDaoAreInitialized() throws Exception {
         verifyOrder(goConfigService, pipelineSqlMapDao, ccTrayActivityListener);
+    }
+
+    @Test
+    public void shouldInitializePipelineConfigServiceAfterGoConfigServiceIsInitialized() throws Exception {
+        verifyOrder(goConfigService, pipelineConfigService);
     }
 
     private void verifyOrder(Initializer... initializers) {

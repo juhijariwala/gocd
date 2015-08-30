@@ -27,6 +27,11 @@ public class SubsectionLocalizedOperationResult implements LocalizedOperationRes
         throw new UnsupportedOperationException("not supported");
     }
 
+    @Override
+    public void stale(Localizable message) {
+        throw new UnsupportedOperationException("not supported");
+    }
+
     public void notFound(Localizable message, HealthStateType healthStateType) {
         throw new UnsupportedOperationException("not supported");
     }

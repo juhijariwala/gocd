@@ -113,6 +113,10 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
     public CaseInsensitiveString name() {
         return jobName;
     }
+    public void setName(String name){
+        this.jobName=new CaseInsensitiveString(name);
+
+    }
 
     public Resources resources() {
         return resources;
@@ -153,8 +157,16 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
         return artifactPlans;
     }
 
+    public void setArtifactPlans(ArtifactPlans artifactPlans) {
+        this.artifactPlans = artifactPlans;
+    }
+
     public Tabs getTabs() {
         return tabs;
+    }
+
+    public void setTabs(Tabs tabs) {
+        this.tabs = tabs;
     }
 
     public void addTab(String tab, String path) {
@@ -165,8 +177,16 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
         return artifactPropertiesGenerators;
     }
 
+    public void setProperties(ArtifactPropertiesGenerators properties) {
+        artifactPropertiesGenerators = properties;
+    }
+
     public Tasks getTasks() {
         return tasks;
+    }
+
+    public void setTasks(Tasks tasks) {
+        this.tasks = tasks;
     }
 
     public void addResource(String resource) {
@@ -195,7 +215,11 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
 	}
 
 	public void setRunInstanceCount(Integer runInstanceCount) {
-		this.runInstanceCount = Integer.toString(runInstanceCount);
+		setRunInstanceCount(Integer.toString(runInstanceCount));
+	}
+
+	public void setRunInstanceCount(String runInstanceCount) {
+		this.runInstanceCount = runInstanceCount;
 	}
 
 	public boolean isInstanceOf(String jobInstanceName, boolean ignoreCase) {
@@ -231,7 +255,6 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
         variables.add(name, value);
     }
 
-    // only called from tests
     public void setVariables(EnvironmentVariablesConfig variables) {
         this.variables = variables;
     }
@@ -261,8 +284,24 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
         return false;
     }
 
+    public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
+        validate(validationContext);
+        boolean isValid = errors.isEmpty();
+        PipelineConfigSaveValidationContext contextForChildren = validationContext.withParent(this);
+        isValid = tasks.validateTree(contextForChildren) && isValid;
+        isValid = variables.validateTree(contextForChildren) && isValid;
+        isValid = resources.validateTree(contextForChildren) && isValid;
+        isValid = artifactPropertiesGenerators.validateTree(contextForChildren) && isValid;
+        isValid = tabs.validateTree(contextForChildren) && isValid;
+        isValid = artifactPlans.validateTree(contextForChildren) && isValid;
+        return isValid;
+    }
+
     public void validate(ValidationContext validationContext) {
-        if (CaseInsensitiveString.str(name()).length() > 255 || XmlUtils.doesNotMatchUsingXsdRegex(JOB_NAME_PATTERN_REGEX, CaseInsensitiveString.str(name()))) {
+        if(StringUtil.isBlank(CaseInsensitiveString.str(name()))){
+            errors.add(NAME, "Name is a required field");
+        }
+        if (!StringUtil.isBlank(CaseInsensitiveString.str(name())) && (CaseInsensitiveString.str(name()).length() > 255 || XmlUtils.doesNotMatchUsingXsdRegex(JOB_NAME_PATTERN_REGEX, CaseInsensitiveString.str(name())))) {
             String message = String.format("Invalid job name '%s'. This must be alphanumeric and can contain underscores and periods. The maximum allowed length is %d characters.", name(),
                     NameTypeValidator.MAX_LENGTH);
             errors.add(NAME, message);

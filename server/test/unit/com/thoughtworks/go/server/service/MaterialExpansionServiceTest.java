@@ -116,7 +116,7 @@ public class MaterialExpansionServiceTest {
     public void shouldExpandSvnMaterialWithFolders() {
         SvnMaterialConfig svn = svnMaterialConfig(svnRepo.projectRepositoryUrl(), null);
         SvnMaterialConfig svnExt = svnMaterialConfig(svnRepo.externalRepositoryUrl(), "end2end");
-
+        svnExt.setName(null);
         PipelineConfig pipelineConfig = new PipelineConfig();
         pipelineConfig.addMaterialConfig(svn);
         String cacheKeyForSvn = MaterialExpansionService.class + "_cacheKeyForSvnMaterialCheckExternalCommand_" + svn.getFingerprint();

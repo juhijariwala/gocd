@@ -22,14 +22,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ConfigAttribute;
-import com.thoughtworks.go.config.ConfigTag;
-import com.thoughtworks.go.config.CruiseConfig;
-import com.thoughtworks.go.config.FetchTask;
-import com.thoughtworks.go.config.ParamsAttributeAware;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.materials.AbstractMaterialConfig;
 import com.thoughtworks.go.config.materials.Filter;
 import com.thoughtworks.go.domain.ConfigErrors;
@@ -115,6 +108,10 @@ public class DependencyMaterialConfig extends AbstractMaterialConfig implements 
     }
 
     @Override
+    public void setAutoUpdate(boolean autoUpdate) {
+    }
+
+    @Override
     protected void appendCriteria(Map<String, Object> parameters) {
         parameters.put("pipelineName", CaseInsensitiveString.str(pipelineName));
         parameters.put("stageName", CaseInsensitiveString.str(stageName));
@@ -129,8 +126,16 @@ public class DependencyMaterialConfig extends AbstractMaterialConfig implements 
         return pipelineName;
     }
 
+    public void setPipelineName(CaseInsensitiveString pipelineName) {
+        this.pipelineName = pipelineName;
+    }
+
     public CaseInsensitiveString getStageName() {
         return stageName;
+    }
+
+    public void setStageName(CaseInsensitiveString stageName) {
+        this.stageName = stageName;
     }
 
     @Override
@@ -184,12 +189,13 @@ public class DependencyMaterialConfig extends AbstractMaterialConfig implements 
     protected void validateConcreteMaterial(ValidationContext validationContext) {
         CaseInsensitiveString upstreamPipelineName = this.getPipelineName();
         CaseInsensitiveString upstreamStageName = this.getStageName();
-        CruiseConfig cruiseConfig = validationContext.getCruiseConfig();
-        if (!cruiseConfig.hasPipelineNamed(upstreamPipelineName)) {
-            errors.add(PIPELINE_STAGE_NAME, String.format("Pipeline with name '%s' does not exist", upstreamPipelineName));
+
+        PipelineConfig upstreamPipeline = validationContext.getPipelineConfigByName(upstreamPipelineName);
+        if (upstreamPipeline==null) {
+            errors.add(DependencyMaterialConfig.PIPELINE_STAGE_NAME, String.format("Pipeline with name '%s' does not exist", upstreamPipelineName));
         }
-        if (!cruiseConfig.hasStageConfigNamed(upstreamPipelineName, upstreamStageName, true)) {
-            errors.add(PIPELINE_STAGE_NAME, String.format("Stage with name '%s' does not exist on pipeline '%s'", upstreamStageName, upstreamPipelineName));
+        else if (upstreamPipeline.findBy(upstreamStageName) == null) {
+            errors.add(DependencyMaterialConfig.PIPELINE_STAGE_NAME, String.format("Stage with name '%s' does not exist on pipeline '%s'", upstreamStageName, upstreamPipelineName));
         }
     }
 

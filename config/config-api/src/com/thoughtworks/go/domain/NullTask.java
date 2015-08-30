@@ -63,6 +63,11 @@ public class NullTask implements Task {
         return this.getTaskType().equals(task.getTaskType());
     }
 
+    @Override
+    public boolean validateTree(ValidationContext validationContext) {
+        return true;
+    }
+
 
     public void validate(ValidationContext validationContext) {
     }

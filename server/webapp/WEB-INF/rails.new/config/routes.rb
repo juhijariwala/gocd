@@ -229,6 +229,15 @@ Go::Application.routes.draw do
         patch :update, on: :member
       end
 
+      namespace :admin do
+        resources :pipelines, param: :name, only: [:show, :update] do
+          member do
+            get :show
+            patch :update
+          end
+        end
+      end
+
       get 'stages/:pipeline_name/:pipeline_counter/:stage_name/:stage_counter' => 'stages#show', constraints: {pipeline_name: PIPELINE_NAME_FORMAT, pipeline_counter: PIPELINE_COUNTER_FORMAT, stage_name: STAGE_NAME_FORMAT, stage_counter: STAGE_COUNTER_FORMAT}, as: :stage_instance_by_counter_api
       get 'stages/:pipeline_name/:stage_name' => 'stages#history', constraints: {pipeline_name: PIPELINE_NAME_FORMAT, stage_name: STAGE_NAME_FORMAT}, as: :stage_history_api
 

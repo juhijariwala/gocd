@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *************************GO-LICENSE-END***********************************/
+
 package com.thoughtworks.go.config;
 
 import com.thoughtworks.go.config.validation.GoConfigValidity;
@@ -28,6 +29,8 @@ public interface CachedGoConfig {
     void loadConfigIfNull();
 
     ConfigSaveState writeWithLock(UpdateConfigCommand updateConfigCommand);
+
+    void writePipelineWithLock(PipelineConfig pipelineConfig);
 
     String getFileLocation();
 

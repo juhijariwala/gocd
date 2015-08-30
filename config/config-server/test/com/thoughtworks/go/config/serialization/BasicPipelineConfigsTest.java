@@ -98,7 +98,7 @@ public class BasicPipelineConfigsTest {
                 + "  </authorization>\n"
                 + "  <pipeline name=\"pipeline1\">\n"
                 + "    <materials>\n"
-                + "      <svn url=\"http://some/svn/url\" dest=\"svnDir\" />\n"
+                + "      <svn url=\"http://some/svn/url\" dest=\"svnDir\" materialName=\"http___some_svn_url\" />\n"
                 + "    </materials>\n"
                 + "    <stage name=\"mingle\">\n"
                 + "      <jobs />\n"

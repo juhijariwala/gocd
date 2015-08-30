@@ -45,6 +45,14 @@ public class CcTrayConfigChangeHandler {
         cache.replaceAllEntriesInCacheWith(findAllProjectStatusesForStagesAndJobsIn(config));
     }
 
+    public void call(PipelineConfig pipelineConfig, String pipelineGroup) {
+        ArrayList<ProjectStatus> projectStatuses = new ArrayList<ProjectStatus>();
+        final Map<String, Viewers> groupsAndTheirViewers = ccTrayViewAuthority.groupsAndTheirViewers();
+        Viewers usersWithViewPermissionsOfThisGroup = groupsAndTheirViewers.get(pipelineGroup);
+        updateProjectStatusForPipeline(usersWithViewPermissionsOfThisGroup, pipelineConfig, projectStatuses);
+        cache.putAll(projectStatuses);
+    }
+
     private List<ProjectStatus> findAllProjectStatusesForStagesAndJobsIn(CruiseConfig config) {
         final List<ProjectStatus> projectStatuses = new ArrayList<ProjectStatus>();
         final Map<String, Viewers> groupsAndTheirViewers = ccTrayViewAuthority.groupsAndTheirViewers();
@@ -55,26 +63,31 @@ public class CcTrayConfigChangeHandler {
                 Viewers usersWithViewPermissionsOfThisGroup = groupsAndTheirViewers.get(pipelineConfigs.getGroup());
 
                 for (PipelineConfig pipelineConfig : pipelineConfigs) {
-                    for (StageConfig stageConfig : pipelineConfig) {
-                        List<ProjectStatus> statusesInCacheOrDB = findExistingStatuses(pipelineConfig, stageConfig);
-                        List<ProjectStatus> statuses = getStatusesForCurrentProjectsWithDefaultsForMissingOnes(pipelineConfig, stageConfig, statusesInCacheOrDB);
-                        updateStatusesWithUsersHavingViewPermission(statuses, usersWithViewPermissionsOfThisGroup);
-
-                        projectStatuses.addAll(statuses);
-                    }
+                    updateProjectStatusForPipeline(usersWithViewPermissionsOfThisGroup, pipelineConfig, projectStatuses);
                 }
             }
 
-            private List<ProjectStatus> findExistingStatuses(PipelineConfig pipelineConfig, StageConfig stageConfig) {
-                if (cache.get(stageProjectName(pipelineConfig, stageConfig)) != null) {
-                    return findStageAndStatusesFromCache(pipelineConfig, stageConfig);
-                } else {
-                    return findStageAndStatusesFromDB(pipelineConfig, stageConfig);
-                }
-            }
         });
 
         return projectStatuses;
+    }
+
+    private void updateProjectStatusForPipeline(Viewers usersWithViewPermissionsOfThisGroup, PipelineConfig pipelineConfig, List<ProjectStatus> projectStatuses) {
+        for (StageConfig stageConfig : pipelineConfig) {
+            List<ProjectStatus> statusesInCacheOrDB = findExistingStatuses(pipelineConfig, stageConfig);
+            List<ProjectStatus> statuses = getStatusesForCurrentProjectsWithDefaultsForMissingOnes(pipelineConfig, stageConfig, statusesInCacheOrDB);
+            updateStatusesWithUsersHavingViewPermission(statuses, usersWithViewPermissionsOfThisGroup);
+
+            projectStatuses.addAll(statuses);
+        }
+    }
+
+    private List<ProjectStatus> findExistingStatuses(PipelineConfig pipelineConfig, StageConfig stageConfig) {
+        if (cache.get(stageProjectName(pipelineConfig, stageConfig)) != null) {
+            return findStageAndStatusesFromCache(pipelineConfig, stageConfig);
+        } else {
+            return findStageAndStatusesFromDB(pipelineConfig, stageConfig);
+        }
     }
 
     private List<ProjectStatus> findStageAndStatusesFromCache(PipelineConfig pipelineConfig, StageConfig stageConfig) {

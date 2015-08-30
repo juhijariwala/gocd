@@ -18,6 +18,7 @@ package com.thoughtworks.go.server.service;
 
 import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.materials.MaterialConfigs;
+import com.thoughtworks.go.config.materials.svn.SvnMaterialConfig;
 import com.thoughtworks.go.domain.*;
 import com.thoughtworks.go.domain.buildcause.BuildCause;
 import com.thoughtworks.go.domain.materials.MaterialConfig;
@@ -774,7 +775,9 @@ public class PipelineHistoryServiceTest {
         stubConfigServiceToReturnPipeline("blahPipeline", PipelineConfigMother.pipelineConfig("blahPipeline", new StageConfig(new CaseInsensitiveString("first"), new JobConfigs())));
         ensureHasPermission(USERNAME, "blahPipeline");
 
-        stubConfigServiceToReturnMaterialAndPipeline("down1", new MaterialConfigs(MaterialConfigsMother.svnMaterialConfig()), PipelineConfigMother.pipelineConfig("down1", new StageConfig(
+        SvnMaterialConfig svnMaterialConfig = MaterialConfigsMother.svnMaterialConfig();
+        svnMaterialConfig.setName(null);
+        stubConfigServiceToReturnMaterialAndPipeline("down1", new MaterialConfigs(svnMaterialConfig), PipelineConfigMother.pipelineConfig("down1", new StageConfig(
                 new CaseInsensitiveString("first"), new JobConfigs()
         )));
         ensureHasPermission(USERNAME, "down1");

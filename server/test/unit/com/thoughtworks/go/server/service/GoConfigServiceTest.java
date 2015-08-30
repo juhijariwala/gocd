@@ -22,6 +22,7 @@ import com.thoughtworks.go.config.exceptions.GoConfigInvalidException;
 import com.thoughtworks.go.config.exceptions.PipelineGroupNotFoundException;
 import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig;
+import com.thoughtworks.go.config.materials.git.GitMaterialConfig;
 import com.thoughtworks.go.config.materials.svn.SvnMaterialConfig;
 import com.thoughtworks.go.config.registry.ConfigElementImplementationRegistry;
 import com.thoughtworks.go.config.server.security.ldap.BaseConfig;
@@ -36,6 +37,7 @@ import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.helper.MaterialConfigsMother;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import com.thoughtworks.go.helper.StageConfigMother;
+import com.thoughtworks.go.i18n.Localizable;
 import com.thoughtworks.go.i18n.Localizer;
 import com.thoughtworks.go.listener.BaseUrlChangeListener;
 import com.thoughtworks.go.listener.ConfigChangedListener;
@@ -50,6 +52,9 @@ import com.thoughtworks.go.server.domain.Username;
 import com.thoughtworks.go.server.domain.user.PipelineSelections;
 import com.thoughtworks.go.server.persistence.PipelineRepository;
 import com.thoughtworks.go.server.service.result.HttpLocalizedOperationResult;
+import com.thoughtworks.go.server.service.result.LocalizedOperationResult;
+import com.thoughtworks.go.serverhealth.HealthStateScope;
+import com.thoughtworks.go.serverhealth.HealthStateType;
 import com.thoughtworks.go.service.ConfigRepository;
 import com.thoughtworks.go.util.*;
 import org.hamcrest.BaseMatcher;
@@ -63,6 +68,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.springframework.context.support.MessageSourceAccessor;
 
 import java.io.File;
 import java.util.*;
@@ -1474,6 +1483,35 @@ public class GoConfigServiceTest {
 
         verify(pipelineRepository).findPipelineSelectionsByUserId(1L);
         verify(pipelineRepository, times(1)).saveSelectedPipelines(argThat(isAPipelineSelectionsInstanceWith(false, "pipeline1", "pipeline2", "pipelineNew")));
+    }
+
+    @Test
+    public void shouldCheckForUserPermissionBeforeUpdatingPipelineConfig(){
+        Username currentUser = new Username(new CaseInsensitiveString("unauthorised-user"));
+        LocalizedOperationResult result = mock(LocalizedOperationResult.class);
+        String p1 = "p1";
+        cruiseConfig.addPipeline("g1", new PipelineConfig(new CaseInsensitiveString(p1), new MaterialConfigs()));
+        cruiseConfig.server().useSecurity(new SecurityConfig(null, new PasswordFileConfig("junk"), true));
+        cruiseConfig.server().security().adminsConfig().add(new AdminUser(new CaseInsensitiveString("super-admin")));
+        ArgumentCaptor<com.thoughtworks.go.i18n.LocalizedKeyValueMessage> captor = ArgumentCaptor.forClass(com.thoughtworks.go.i18n.LocalizedKeyValueMessage.class);
+        ArgumentCaptor<HealthStateType> captorForHealthStateType = ArgumentCaptor.forClass(HealthStateType.class);
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString(p1), new MaterialConfigs(new GitMaterialConfig("url")));
+        CachedGoConfig cachedConfigService = mock(CachedGoConfig.class);
+        when(cachedConfigService.currentConfig()).thenReturn(cruiseConfig);
+        goConfigDao = new GoConfigDao(cachedConfigService, null);
+        goConfigService = new GoConfigService(goConfigDao, pipelineRepository, this.clock, new GoConfigMigration(configRepo, new TimeProvider(), new ConfigCache(),
+                null, metricsProbeService), goCache, configRepo, userDao, null, metricsProbeService,
+                instanceFactory);
+
+        goConfigService.updatePipeline(pipelineConfig, currentUser, result);
+
+        verify(result).unauthorized(captor.capture(), captorForHealthStateType.capture());
+        assertThat(captorForHealthStateType.getValue().getHttpCode(), is(401));
+        assertThat(captorForHealthStateType.getValue().getScope().isForPipeline(), is(true));
+        assertThat(captorForHealthStateType.getValue().getScope().getScope(), is(p1));
+        verifyNoMoreInteractions(result);
+        verify(cachedConfigService, atLeastOnce()).currentConfig();
+        verifyNoMoreInteractions(cachedConfigService);
     }
 
     private PipelineConfig createPipelineConfig(String pipelineName, String stageName, String... buildNames) {

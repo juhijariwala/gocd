@@ -41,12 +41,24 @@ public class EnvironmentVariablesConfig extends BaseCollection<EnvironmentVariab
     public EnvironmentVariablesConfig(List<EnvironmentVariableConfig> elements) {
         super(elements);
     }
+    public EnvironmentVariablesConfig(EnvironmentVariableConfig[] elements) {
+        super(elements);
+    }
 
     public void validate(ValidationContext validationContext) {
         Map<String, EnvironmentVariableConfig> map = new HashMap<String, EnvironmentVariableConfig>();
         for (EnvironmentVariableConfig config : this) {
             config.validateName(map, validationContext);
         }
+    }
+
+    public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
+        validate(validationContext);
+        boolean isValid = errors().isEmpty();
+        for (EnvironmentVariableConfig config : this) {
+            isValid = config.validateTree(validationContext) && isValid;
+        }
+        return isValid;
     }
 
     public ConfigErrors errors() {

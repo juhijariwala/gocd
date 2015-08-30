@@ -17,7 +17,7 @@
 package com.thoughtworks.go.config.materials;
 
 import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.materials.git.GitMaterialConfig;
 import com.thoughtworks.go.domain.config.Configuration;
 import com.thoughtworks.go.domain.scm.SCM;
@@ -51,7 +51,7 @@ public class PluggableSCMMaterialConfigTest {
     @Test
     public void shouldAddErrorIfMaterialDoesNotHaveASCMId() throws Exception {
         PluggableSCMMaterialConfig pluggableSCMMaterialConfig = new PluggableSCMMaterialConfig();
-        pluggableSCMMaterialConfig.validateConcreteMaterial(new ValidationContext(null, null));
+        pluggableSCMMaterialConfig.validateConcreteMaterial(new ConfigSaveValidationContext(null, null));
 
         assertThat(pluggableSCMMaterialConfig.errors().getAll().size(), is(1));
         assertThat(pluggableSCMMaterialConfig.errors().on(PluggableSCMMaterialConfig.SCM_ID), is("Please select a SCM"));
@@ -104,13 +104,13 @@ public class PluggableSCMMaterialConfigTest {
     @Test
     public void shouldAddErrorIDestinationIsNotValid() throws Exception {
         PluggableSCMMaterialConfig pluggableSCMMaterialConfig = new PluggableSCMMaterialConfig(null, SCMMother.create("scm-id"), "/usr/home", null);
-        pluggableSCMMaterialConfig.validateConcreteMaterial(new ValidationContext(null, null));
+        pluggableSCMMaterialConfig.validateConcreteMaterial(new ConfigSaveValidationContext(null, null));
 
         assertThat(pluggableSCMMaterialConfig.errors().getAll().size(), is(1));
         assertThat(pluggableSCMMaterialConfig.errors().on(PluggableSCMMaterialConfig.FOLDER), is("Dest folder '/usr/home' is not valid. It must be a sub-directory of the working folder."));
 
         pluggableSCMMaterialConfig = new PluggableSCMMaterialConfig(null, SCMMother.create("scm-id"), ".crap", null);
-        pluggableSCMMaterialConfig.validateConcreteMaterial(new ValidationContext(null, null));
+        pluggableSCMMaterialConfig.validateConcreteMaterial(new ConfigSaveValidationContext(null, null));
 
         assertThat(pluggableSCMMaterialConfig.errors().getAll().size(), is(1));
         assertThat(pluggableSCMMaterialConfig.errors().on(PluggableSCMMaterialConfig.FOLDER), is("Invalid directory name '.crap'. It should be a valid relative path."));

@@ -48,6 +48,19 @@ public class ParamConfig implements Validatable {
         return value;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
+    }
+
     public void validate(ValidationContext validationContext) {
         if (!new NameTypeValidator().isNameValid(name)) {
             errors().add(NAME, NameTypeValidator.errorMessage("parameter", name));
@@ -56,12 +69,14 @@ public class ParamConfig implements Validatable {
 
 
     public void validateName(Map<String, ParamConfig> paramConfigMap, ValidationContext validationContext) {
-        String currentParamName = name.toLowerCase();
         CaseInsensitiveString parentName = validationContext.getPipeline().name();
-        if (StringUtil.isBlank(currentParamName)) {
+
+        if (StringUtil.isBlank(name)) {
             configErrors.add("name", String.format("Parameter cannot have an empty name for pipeline '%s'.", parentName));
             return;
         }
+        String currentParamName = name.toLowerCase();
+
         ParamConfig paramWithSameName = paramConfigMap.get(currentParamName);
         if (paramWithSameName != null) {
             paramWithSameName.addNameConflictError(name, parentName);

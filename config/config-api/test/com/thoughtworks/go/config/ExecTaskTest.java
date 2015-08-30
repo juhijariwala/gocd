@@ -59,7 +59,7 @@ public class ExecTaskTest {
     @Test
     public void shouldValidateConfig() throws Exception {
         ExecTask execTask = new ExecTask("arg1 arg2", new Arguments(new Argument("arg1"), new Argument("arg2")));
-        execTask.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        execTask.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
         assertThat(execTask.errors().isEmpty(), is(false));
         assertThat(execTask.errors().on(ExecTask.ARGS), is(ExecTask.EXEC_CONFIG_ERROR));
         assertThat(execTask.errors().on(ExecTask.ARG_LIST_STRING), is(ExecTask.EXEC_CONFIG_ERROR));
@@ -68,10 +68,10 @@ public class ExecTaskTest {
     @Test
     public void shouldBeValid() throws Exception {
         ExecTask execTask = new ExecTask("", new Arguments(new Argument("arg1"), new Argument("arg2")));
-        execTask.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        execTask.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
         assertThat(execTask.errors().isEmpty(), is(true));
         execTask = new ExecTask("command", "", "blah");
-        execTask.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        execTask.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
         assertThat(execTask.errors().isEmpty(), is(true));
     }
 
@@ -175,7 +175,7 @@ public class ExecTaskTest {
         cruiseConfig.addTemplate(template);
 
         try {
-            execTask.validateTask(ValidationContext.forChain(cruiseConfig, template, templateStage, templateStage.getJobs().first()));
+            execTask.validateTask(ConfigSaveValidationContext.forChain(cruiseConfig, template, templateStage, templateStage.getJobs().first()));
             assertThat(execTask.errors().isEmpty(), is(false));
             assertThat(execTask.errors().on(ExecTask.WORKING_DIR), is("The path of the working directory for the custom command in job 'job' in stage 'templateStage' of template 'template_name' is outside the agent sandbox."));
         } catch (Exception e) {

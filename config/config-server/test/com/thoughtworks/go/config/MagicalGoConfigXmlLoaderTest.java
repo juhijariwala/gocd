@@ -481,11 +481,11 @@ public class MagicalGoConfigXmlLoaderTest {
     @Test
     public void shouldLoadFromSvnPartial() throws Exception {
         String buildXmlPartial =
-                "<svn url=\"http://foo.bar\" username=\"cruise\" password=\"password\" />";
+                "<svn url=\"http://foo.bar\" username=\"cruise\" password=\"password\" materialName=\"http___foo.bar\"/>";
 
-        MaterialConfig jobs = xmlLoader.fromXmlPartial(toInputStream(buildXmlPartial), SvnMaterialConfig.class);
+        MaterialConfig materialConfig = xmlLoader.fromXmlPartial(toInputStream(buildXmlPartial), SvnMaterialConfig.class);
         MaterialConfig svnMaterial = MaterialConfigsMother.svnMaterialConfig("http://foo.bar", null, "cruise", "password", false, null);
-        assertThat(jobs, is(svnMaterial));
+        assertThat(materialConfig, is(svnMaterial));
     }
 
     @Test

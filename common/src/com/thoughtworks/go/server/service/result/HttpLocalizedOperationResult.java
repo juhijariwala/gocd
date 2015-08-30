@@ -61,6 +61,12 @@ public class HttpLocalizedOperationResult implements LocalizedOperationResult {
         httpCode = HttpStatus.SC_UNAUTHORIZED;
     }
 
+    @Override
+    public void stale(Localizable message) {
+        this.message = message;
+        httpCode = HttpStatus.SC_PRECONDITION_FAILED;
+    }
+
     public void notFound(Localizable message, HealthStateType healthStateType) {
         this.message = message;
         this.healthStateType = healthStateType;

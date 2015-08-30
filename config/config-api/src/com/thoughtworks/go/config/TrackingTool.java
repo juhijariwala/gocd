@@ -47,8 +47,16 @@ public class TrackingTool implements ParamsAttributeAware, Validatable, CommentR
         return link;
     }
 
+    public void setLink(String link) {
+        this.link = link;
+    }
+
     public String getRegex() {
         return regex;
+    }
+
+    public void setRegex(String regex) {
+        this.regex = regex;
     }
 
     public String render(String text) {
@@ -66,10 +74,16 @@ public class TrackingTool implements ParamsAttributeAware, Validatable, CommentR
         }
     }
 
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
+    }
+
     public void validate(ValidationContext validationContext) {
         if (StringUtils.isEmpty(link)) {
             configErrors.add(LINK, "Link should be populated");
-        } else if (StringUtils.isEmpty(regex)) {
+        }
+        if (StringUtils.isEmpty(regex)) {
             configErrors.add(REGEX, "Regex should be populated");
         }
         if (!link.contains("${ID}")) {

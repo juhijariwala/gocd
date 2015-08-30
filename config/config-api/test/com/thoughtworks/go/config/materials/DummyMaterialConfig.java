@@ -20,6 +20,7 @@ import java.util.Map;
 
 import com.thoughtworks.go.config.ValidationContext;
 import com.thoughtworks.go.util.command.UrlArgument;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class DummyMaterialConfig extends ScmMaterialConfig {
     public DummyMaterialConfig() {
@@ -49,6 +50,11 @@ public class DummyMaterialConfig extends ScmMaterialConfig {
     @Override
     public String getUrl() {
         return null;
+    }
+
+    @Override
+    public void setUrl(String url) {
+        throw new NotImplementedException();
     }
 
     @Override

@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.thoughtworks.go.config.BasicCruiseConfig;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.helper.ConfigurationHolder;
 import com.thoughtworks.go.domain.config.PluginConfiguration;
 import com.thoughtworks.go.domain.config.Configuration;
@@ -257,7 +257,7 @@ public class PackageRepositoryTest extends PackageMaterialTestBase {
     @Test
     public void shouldValidateIfNameIsMissing() {
         PackageRepository packageRepository = new PackageRepository();
-        packageRepository.validate(new ValidationContext(new BasicCruiseConfig(), null));
+        packageRepository.validate(new ConfigSaveValidationContext(new BasicCruiseConfig(), null));
         assertThat(packageRepository.errors().getAllOn("name"), is(asList("Please provide name")));
     }
 
@@ -306,7 +306,7 @@ public class PackageRepositoryTest extends PackageMaterialTestBase {
     public void shouldValidateName() throws Exception {
         PackageRepository packageRepository = new PackageRepository();
         packageRepository.setName("some name");
-        packageRepository.validate(new ValidationContext(null));
+        packageRepository.validate(new ConfigSaveValidationContext(null));
         assertThat(packageRepository.errors().isEmpty(), is(false));
         assertThat(packageRepository.errors().getAllOn(PackageRepository.NAME).get(0),
                 is("Invalid PackageRepository name 'some name'. This must be alphanumeric and can contain underscores and periods (however, it cannot start with a period). The maximum allowed length is 255 characters."));

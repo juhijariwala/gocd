@@ -262,4 +262,13 @@ public class MergedGoConfigTest extends CachedGoConfigTestBase {
         assertSame(cachedFileGoConfig.currentConfig(), mergedGoConfig.currentConfig());
         assertSame(cachedFileGoConfig.loadForEditing(), mergedGoConfig.loadForEditing());
     }
+
+    @Test
+    public void shouldDelegateWritePipelineConfigCallToFileService(){
+        CachedFileGoConfig fileService = mock(CachedFileGoConfig.class);
+        MergedGoConfig mergedGoConfig = new MergedGoConfig(mock(ServerHealthService.class), fileService, mock(GoPartialConfig.class));
+        PipelineConfig pipelineConfig = new PipelineConfig();
+        mergedGoConfig.writePipelineWithLock(pipelineConfig);
+        verify(fileService).writePipelineWithLock(pipelineConfig);
+    }
 }

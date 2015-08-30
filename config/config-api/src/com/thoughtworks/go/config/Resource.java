@@ -92,6 +92,11 @@ public class Resource extends PersistentObject implements Serializable, Comparab
         return resources;
     }
 
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
+    }
+
     public void validate(ValidationContext validationContext) {
         if (validationContext.isWithinTemplates()) {
             if (!name.matches(VALID_REGEX_WHEN_IN_TEMPLATES)) {

@@ -25,6 +25,8 @@ import com.thoughtworks.go.serverhealth.HealthStateType;
 public interface LocalizedOperationResult {
     void unauthorized(Localizable message, HealthStateType id);
 
+    void stale(Localizable message);
+
     void notFound(Localizable message, HealthStateType healthStateType);
 
     boolean isSuccessful();

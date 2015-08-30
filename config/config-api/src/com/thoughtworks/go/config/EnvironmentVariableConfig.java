@@ -139,6 +139,9 @@ public class EnvironmentVariableConfig extends PersistentObject implements Seria
     public String getName() {
         return name;
     }
+    public void setName(String name) {
+        this.name=name;
+    }
 
     void addTo(EnvironmentVariableContext context) {
         context.setProperty(name, getValue(), isSecure());
@@ -193,6 +196,11 @@ public class EnvironmentVariableConfig extends PersistentObject implements Seria
         return name.equals(variableName);
     }
 
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
+    }
+
     public void validate(ValidationContext validationContext) {
         try {
             getValue();
@@ -213,16 +221,24 @@ public class EnvironmentVariableConfig extends PersistentObject implements Seria
         return isSecure;
     }
 
+    public void setIsSecure(boolean isSecure){
+        this.isSecure=isSecure;
+    }
+
+
     public boolean isPlain() {
         return !isSecure();
     }
 
-    private void setValue(String value){
+    public void setValue(String value){
         if (isSecure) {
             encryptedValue = new EncryptedVariableValueConfig(encrypt(value));
         } else {
             this.value = new VariableValueConfig(value);
         }
+    }
+    public void setEncryptedValue(String encrypted){
+        this.encryptedValue = new EncryptedVariableValueConfig(encrypted);
     }
     
     public String getValue() {

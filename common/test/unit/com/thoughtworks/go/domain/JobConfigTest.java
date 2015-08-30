@@ -24,6 +24,7 @@ import com.thoughtworks.go.util.DataStructureUtils;
 import com.thoughtworks.go.util.ReflectionUtil;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 
 import java.util.HashMap;
@@ -130,13 +131,19 @@ public class JobConfigTest {
         assertThat(configErrors.isEmpty(), is(false));
         assertThat(configErrors.on(JobConfig.NAME), is("Invalid job name 'name pavan'. This must be alphanumeric and can contain underscores and periods. The maximum allowed length is 255 characters."));
     }
+    @Test
+    public void shouldFailValidationWhenJobNameIsEmpty(){
+        ConfigErrors configErrors = createJobAndValidate(null).errors();
+        assertThat(configErrors.isEmpty(), is(false));
+        assertThat(configErrors.on(JobConfig.NAME), is("Name is a required field"));
+    }
 
 	@Test
 	public void shouldValidateAgainstSettingRunInstanceCountToIncorrectValue() {
 		JobConfig jobConfig1 = new JobConfig(new CaseInsensitiveString("test"));
 		jobConfig1.setRunInstanceCount(-1);
 
-		jobConfig1.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+		jobConfig1.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
 
 		ConfigErrors configErrors1 = jobConfig1.errors();
 		assertThat(configErrors1.isEmpty(), is(false));
@@ -145,7 +152,7 @@ public class JobConfigTest {
 		JobConfig jobConfig2 = new JobConfig(new CaseInsensitiveString("test"));
 		ReflectionUtil.setField(jobConfig2, "runInstanceCount", "abcd");
 
-		jobConfig2.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+		jobConfig2.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
 
 		ConfigErrors configErrors2 = jobConfig2.errors();
 		assertThat(configErrors2.isEmpty(), is(false));
@@ -158,7 +165,7 @@ public class JobConfigTest {
 		jobConfig.setRunOnAllAgents(true);
 		jobConfig.setRunInstanceCount(10);
 
-		jobConfig.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+		jobConfig.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
 
 		ConfigErrors configErrors = jobConfig.errors();
 		assertThat(configErrors.isEmpty(), is(false));
@@ -339,7 +346,7 @@ public class JobConfigTest {
     public void shouldValidateThatTheTimeoutIsAValidNumber() {
         JobConfig job = new JobConfig("job");
         job.setTimeout("5.5");
-        job.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        job.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
         assertThat(job.errors().isEmpty(), is(true));
     }
 
@@ -347,7 +354,7 @@ public class JobConfigTest {
     public void shouldMarkJobInvalidIfTimeoutIsNotAValidNumber() {
         JobConfig job = new JobConfig("job");
         job.setTimeout("5.5MN");
-        job.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        job.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
         assertThat(job.errors().isEmpty(), is(false));
         assertThat(job.errors().on(JobConfig.TIMEOUT), is("Timeout should be a valid number as it represents number of minutes"));
     }
@@ -377,15 +384,85 @@ public class JobConfigTest {
     public void shouldErrorOutWhenTimeoutIsANegativeNumber() {
         JobConfig jobConfig = new JobConfig("job");
         jobConfig.setTimeout("-1");
-        jobConfig.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        jobConfig.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
 
         assertThat(jobConfig.errors().isEmpty(), is(false));
         assertThat(jobConfig.errors().on(JobConfig.TIMEOUT), is("Timeout cannot be a negative number as it represents number of minutes"));
     }
 
+    @Test
+    public void shouldValidateTree(){
+        Resources resources = mock(Resources.class);
+        when(resources.iterator()).thenReturn(new Resources().iterator());
+        ArtifactPlans artifactPlans = mock(ArtifactPlans.class);
+        ArtifactPropertiesGenerators properties = mock(ArtifactPropertiesGenerators.class);
+        Tasks tasks = mock(Tasks.class);
+        Tabs tabs = mock(Tabs.class);
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        when(tasks.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(resources.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(properties.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(artifactPlans.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(tabs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+
+        JobConfig jobConfig = new JobConfig(new CaseInsensitiveString("job"), resources, artifactPlans, tasks);
+        jobConfig.setTabs(tabs);
+        jobConfig.setProperties(properties);
+        jobConfig.setVariables(variables);
+
+        PipelineConfigSaveValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineConfig(), new StageConfig(), jobConfig);
+        assertThat(jobConfig.validateTree(context), is(true));
+
+        ArgumentCaptor<PipelineConfigSaveValidationContext> captor = ArgumentCaptor.forClass(PipelineConfigSaveValidationContext.class);
+        verify(tasks).validateTree(captor.capture());
+        PipelineConfigSaveValidationContext childContext = captor.getValue();
+        assertThat((JobConfig)childContext.getParent(), is(jobConfig));
+        verify(resources).validateTree(childContext);
+        verify(properties).validateTree(childContext);
+        verify(artifactPlans).validateTree(childContext);
+        verify(tabs).validateTree(childContext);
+        verify(variables).validateTree(childContext);
+    }
+
+    @Test
+    public void shouldFailValidationIfAnyDescendentIsInvalid(){
+        Resources resources = mock(Resources.class);
+        when(resources.iterator()).thenReturn(new Resources().iterator());
+        ArtifactPlans artifactPlans = mock(ArtifactPlans.class);
+        ArtifactPropertiesGenerators properties = mock(ArtifactPropertiesGenerators.class);
+        Tasks tasks = mock(Tasks.class);
+        Tabs tabs = mock(Tabs.class);
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        when(tasks.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(resources.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(properties.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(artifactPlans.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(tabs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+
+        JobConfig jobConfig = new JobConfig(new CaseInsensitiveString("job"), resources, artifactPlans, tasks);
+        jobConfig.setTabs(tabs);
+        jobConfig.setProperties(properties);
+        jobConfig.setVariables(variables);
+
+        PipelineConfigSaveValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineConfig(), new StageConfig(), jobConfig);
+        assertThat(jobConfig.validateTree(context), is(false));
+
+        ArgumentCaptor<PipelineConfigSaveValidationContext> captor = ArgumentCaptor.forClass(PipelineConfigSaveValidationContext.class);
+        verify(tasks).validateTree(captor.capture());
+        PipelineConfigSaveValidationContext childContext = captor.getValue();
+        assertThat((JobConfig)childContext.getParent(), is(jobConfig));
+        verify(resources).validateTree(childContext);
+        verify(properties).validateTree(childContext);
+        verify(artifactPlans).validateTree(childContext);
+        verify(tabs).validateTree(childContext);
+        verify(variables).validateTree(childContext);
+    }
+
     private JobConfig createJobAndValidate(final String name) {
         JobConfig jobConfig = new JobConfig(name);
-        jobConfig.validate(ValidationContext.forChain(new BasicCruiseConfig()));
+        jobConfig.validate(ConfigSaveValidationContext.forChain(new BasicCruiseConfig()));
         return jobConfig;
     }
 }

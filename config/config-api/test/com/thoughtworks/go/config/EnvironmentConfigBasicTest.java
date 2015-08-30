@@ -52,7 +52,7 @@ public class EnvironmentConfigBasicTest extends EnvironmentConfigTestBase {
         environmentConfig.addPipeline(new CaseInsensitiveString("pipe1"));
         cruiseConfig.addEnvironment(environmentConfig);
 
-        environmentConfig.validate(ValidationContext.forChain(cruiseConfig, environmentConfig));
+        environmentConfig.validate(ConfigSaveValidationContext.forChain(cruiseConfig, environmentConfig));
         EnvironmentPipelineConfig reference = environmentConfig.getPipelines().first();
 
         assertThat(reference.errors().isEmpty(),is(false));
@@ -99,7 +99,7 @@ public class EnvironmentConfigBasicTest extends EnvironmentConfigTestBase {
         environmentConfig.addPipeline(new CaseInsensitiveString("unknown"));
         cruiseConfig.addEnvironment(environmentConfig);
 
-        environmentConfig.validate(ValidationContext.forChain(cruiseConfig, environmentConfig));
+        environmentConfig.validate(ConfigSaveValidationContext.forChain(cruiseConfig, environmentConfig));
         EnvironmentPipelineConfig reference = environmentConfig.getPipelines().first();
 
         assertThat(reference.errors().isEmpty(),is(true));
@@ -114,7 +114,7 @@ public class EnvironmentConfigBasicTest extends EnvironmentConfigTestBase {
         environmentConfig.addPipeline(new CaseInsensitiveString("pipe1"));
         cruiseConfig.addEnvironment(environmentConfig);
 
-        environmentConfig.validate(ValidationContext.forChain(cruiseConfig, environmentConfig));
+        environmentConfig.validate(ConfigSaveValidationContext.forChain(cruiseConfig, environmentConfig));
         EnvironmentPipelineConfig reference = environmentConfig.getPipelines().first();
 
         assertThat(reference.errors().isEmpty(),is(true));

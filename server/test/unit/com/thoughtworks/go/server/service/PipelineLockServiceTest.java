@@ -16,10 +16,7 @@
 
 package com.thoughtworks.go.server.service;
 
-import com.thoughtworks.go.config.BasicCruiseConfig;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.CruiseConfig;
-import com.thoughtworks.go.config.PipelineNotFoundException;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.domain.Pipeline;
 import com.thoughtworks.go.domain.StageIdentifier;
 import com.thoughtworks.go.helper.PipelineMother;
@@ -147,6 +144,32 @@ public class PipelineLockServiceTest {
         verify(pipelineDao).unlockPipeline("mingle");
         verify(pipelineDao).unlockPipeline("twist");
     }
+
+    @Test public void shouldUnlockCurrentlyLockedPipelineThatIsNoLongerLockableWhenPipelineConfigChanges() throws Exception {
+        PipelineConfig pipelineConfig = mock(PipelineConfig.class);
+
+        when(pipelineDao.lockedPipelines()).thenReturn(asList("locked_pipeline", "other_pipeline"));
+        when(pipelineConfig.isLock()).thenReturn(false);
+        when(pipelineConfig.name()).thenReturn(new CaseInsensitiveString("locked_pipeline"));
+
+        pipelineLockService.onPipelineConfigChange(pipelineConfig, "g1");
+
+        verify(pipelineDao, never()).unlockPipeline("other_pipeline");
+        verify(pipelineDao).unlockPipeline("locked_pipeline");
+    }
+
+    @Test public void shouldNotUnlockCurrentlyLockedPipelineThatContinuesToBeLockableWhenPipelineConfigChanges() throws Exception {
+        PipelineConfig pipelineConfig = mock(PipelineConfig.class);
+
+        when(pipelineDao.lockedPipelines()).thenReturn(asList("locked_pipeline"));
+        when(pipelineConfig.isLock()).thenReturn(true);
+        when(pipelineConfig.name()).thenReturn(new CaseInsensitiveString("locked_pipeline"));
+
+        pipelineLockService.onPipelineConfigChange(pipelineConfig, "g1");
+
+        verify(pipelineDao, never()).unlockPipeline("locked_pipeline");
+    }
+
 
     @Test public void shouldRegisterItselfAsAConfigChangeListener() throws Exception {
         GoConfigService mockGoConfigService = mock(GoConfigService.class);

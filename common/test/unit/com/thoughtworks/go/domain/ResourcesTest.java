@@ -19,6 +19,8 @@ package com.thoughtworks.go.domain;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.thoughtworks.go.config.PipelineConfig;
+import com.thoughtworks.go.config.PipelineConfigSaveValidationContext;
 import com.thoughtworks.go.config.Resource;
 import com.thoughtworks.go.config.Resources;
 import org.junit.Test;
@@ -171,5 +173,16 @@ public class ResourcesTest {
         resources.importFromCsv(csv);
         assertThat(resources.size(), is(4));
         assertThat(resources.exportToCsv(), is("a, b, c, d, "));
+    }
+
+    @Test
+    public void shouldValidateTree(){
+        Resource resource1 = new Resource("a#");
+        Resource resource2 = new Resource("b");
+        Resources resources = new Resources(resource1, resource2);
+        resources.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig()));
+        assertThat(resource1.errors().size(), is(1));
+        assertThat(resource1.errors().firstError(), is(String.format("Resource name 'a#' is not valid. Valid names much match '%s'", Resource.VALID_REGEX)));
+        assertThat(resource2.errors().isEmpty(), is(true));
     }
 }

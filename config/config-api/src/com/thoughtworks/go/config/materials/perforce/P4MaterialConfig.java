@@ -61,6 +61,10 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
     public static final String USE_TICKETS = "useTickets";
     private final GoCipher goCipher;
 
+    public P4MaterialConfig() {
+        this(new GoCipher());
+    }
+
     private P4MaterialConfig(GoCipher goCipher) {
         super(TYPE);
         this.goCipher = goCipher;
@@ -113,6 +117,11 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
         return serverAndPort;
     }
 
+    public void setServerAndPort(String serverAndPort) {
+        this.serverAndPort = serverAndPort;
+    }
+
+
     public String getView() {
         return view == null ? null : view.getValue();
     }
@@ -139,6 +148,11 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
     }
 
     @Override
+    public void setUrl(String serverAndPort) {
+        this.serverAndPort = serverAndPort;
+    }
+
+    @Override
     protected UrlArgument getUrlArgument() {
         return new UrlArgument(serverAndPort);
     }
@@ -152,6 +166,9 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
     public String getUserName() {
         return userName;
     }
+        public void setUserName(String userName) {
+                this.userName = userName;
+            }
 
     @Override
     public String getPassword() {
@@ -205,7 +222,7 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
 
     @Override
     protected void validateConcreteScmMaterial(ValidationContext validationContext) {
-        if (getView().trim().isEmpty()) {
+        if (getView() == null || getView().trim().isEmpty()) {
             errors.add(VIEW, "P4 view cannot be empty.");
         }
         if (StringUtil.isBlank(getServerAndPort())) {
@@ -254,7 +271,7 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
         setUseTickets("true".equals(map.get(USE_TICKETS)));
     }
 
-    private void setView(String viewStr) {
+    public void setView(String viewStr) {
         this.view = new P4MaterialViewConfig(viewStr);
     }
 
@@ -293,6 +310,10 @@ public class P4MaterialConfig extends ScmMaterialConfig implements ParamsAttribu
     @Override
     public String getEncryptedPassword() {
         return encryptedPassword;
+    }
+
+    public void setEncryptedPassword(String encryptedPassword) {
+        this.encryptedPassword = encryptedPassword;
     }
 
     private String p4RepoId() {

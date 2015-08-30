@@ -22,9 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.thoughtworks.go.config.EnvironmentVariableConfig;
-import com.thoughtworks.go.config.EnvironmentVariablesConfig;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import com.thoughtworks.go.security.GoCipher;
 import org.bouncycastle.crypto.InvalidCipherTextException;
@@ -65,6 +63,26 @@ public class EnvironmentVariablesConfigTest {
         assertThat(one.errors().firstError(), contains("Environment Variable name 'FOO' is not unique for pipeline 'some-pipeline'"));
         assertThat(two.errors().isEmpty(), is(false));
         assertThat(two.errors().firstError(), contains("Environment Variable name 'FOO' is not unique for pipeline 'some-pipeline'"));
+    }
+
+    @Test
+    public void shouldValidateTree() {
+        environmentVariablesConfig = new EnvironmentVariablesConfig();
+        EnvironmentVariableConfig one = new EnvironmentVariableConfig("FOO", "BAR");
+        EnvironmentVariableConfig two = new EnvironmentVariableConfig("FOO", "bAZ");
+        EnvironmentVariableConfig three = new EnvironmentVariableConfig("", "bAZ");
+        environmentVariablesConfig.add(one);
+        environmentVariablesConfig.add(two);
+        environmentVariablesConfig.add(three);
+
+        environmentVariablesConfig.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig(new CaseInsensitiveString("p1"), null)));
+
+        assertThat(one.errors().isEmpty(), is(false));
+        assertThat(one.errors().firstError(), contains("Environment Variable name 'FOO' is not unique for pipeline 'p1'"));
+        assertThat(two.errors().isEmpty(), is(false));
+        assertThat(two.errors().firstError(), contains("Environment Variable name 'FOO' is not unique for pipeline 'p1'"));
+        assertThat(three.errors().isEmpty(), is(false));
+        assertThat(three.errors().firstError(), contains("Environment Variable cannot have an empty name for pipeline 'p1'."));
     }
 
 

@@ -84,6 +84,11 @@ public class SomeRandomMaterialConfig extends AbstractMaterialConfig {
     }
 
     @Override
+    public void setAutoUpdate(boolean autoUpdate)  {
+        throw new RuntimeException("Ouch!");
+    }
+
+    @Override
     public String getUriForDisplay() {
         throw new RuntimeException("Ouch!");
     }

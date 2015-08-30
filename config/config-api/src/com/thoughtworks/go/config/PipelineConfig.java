@@ -35,10 +35,7 @@ import com.thoughtworks.go.domain.Task;
 import com.thoughtworks.go.domain.label.PipelineLabel;
 import com.thoughtworks.go.domain.materials.MaterialConfig;
 import com.thoughtworks.go.service.TaskFactory;
-import com.thoughtworks.go.util.Node;
-import com.thoughtworks.go.util.Pair;
-import com.thoughtworks.go.util.StringUtil;
-import com.thoughtworks.go.util.XmlUtils;
+import com.thoughtworks.go.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.lang.StringUtils;
@@ -150,7 +147,57 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
         }
     }
 
+    public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
+        validate(validationContext);
+        if (isEmpty()) {
+            addError("stages", "A pipeline must have at least one stage");
+        }
+        boolean isValid = this.errors().isEmpty();
 
+        PipelineConfigSaveValidationContext contextForChildren = validationContext.withParent(this);
+        for (StageConfig stageConfig : getStages()) {
+            isValid = stageConfig.validateTree(contextForChildren) && isValid;
+        }
+        validateCyclicDependencies(validationContext);
+        isValid = materialConfigs.validateTree(contextForChildren) && isValid;
+        isValid = params.validateTree(contextForChildren) && isValid;
+        isValid = variables.validateTree(contextForChildren) && isValid;
+        if (trackingTool != null) isValid = trackingTool.validateTree(contextForChildren) && isValid;
+        if (mingleConfig != null) isValid = mingleConfig.validateTree(contextForChildren) && isValid;
+        if (timer != null) isValid = timer.validateTree(contextForChildren) && isValid;
+        return isValid;
+    }
+
+    public void validateCyclicDependencies(PipelineConfigSaveValidationContext validationContext) {
+        final DFSCycleDetector dfsCycleDetector = new DFSCycleDetector();
+        try {
+            dfsCycleDetector.topoSort(name(), new PipelineConfigValidationContextDependencyState(this, validationContext));
+        } catch (Exception e) {
+            materialConfigs.addError("base", e.getMessage());
+        }
+    }
+
+    private class PipelineConfigValidationContextDependencyState implements PipelineDependencyState {
+        private PipelineConfig pipelineConfig;
+        private PipelineConfigSaveValidationContext validationContext;
+
+        public PipelineConfigValidationContextDependencyState(PipelineConfig pipelineConfig, PipelineConfigSaveValidationContext validationContext) {
+            this.pipelineConfig = pipelineConfig;
+            this.validationContext = validationContext;
+        }
+
+        @Override
+        public boolean hasPipeline(CaseInsensitiveString key) {
+            return validationContext.getPipelineConfigByName(key) != null;
+        }
+
+        @Override
+        public Node getDependencyMaterials(CaseInsensitiveString pipelineName) {
+            if(pipelineConfig.name().equals(pipelineName))
+                return pipelineConfig.getDependenciesAsNode();
+            return validationContext.getDependencyMaterialsFor(pipelineName);
+        }
+    }
 
     public void validate(ValidationContext validationContext) {
         validateLabelTemplate();
@@ -482,6 +529,10 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
         return timer;
     }
 
+    public void setTimer(TimerConfig timer) {
+        this.timer = timer;
+    }
+
     public boolean requiresApproval() {
         if (isEmpty()) {
             return false;
@@ -653,7 +704,7 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
         }
         Map attributeMap = (Map) attributes;
         if (attributeMap.containsKey(NAME)) {
-            name = new CaseInsensitiveString((String) attributeMap.get(NAME));
+            setName((String) attributeMap.get(NAME));
         }
         if (attributeMap.containsKey(MATERIALS)) {
             materialConfigs.setConfigAttributes(attributeMap.get(MATERIALS));
@@ -696,6 +747,10 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
             StageConfig firstStage = first();
             firstStage.setConfigAttributes(attributeMap);
         }
+    }
+
+    public void setName(String name) {
+        this.name = new CaseInsensitiveString(name);
     }
 
     private void setConfigurationType(Map attributeMap) {
