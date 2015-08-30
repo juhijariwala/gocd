@@ -111,4 +111,8 @@ public class PluginConfiguration implements Serializable, Validatable {
     public void setVersion(String version) {
         this.version = version;
     }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 }

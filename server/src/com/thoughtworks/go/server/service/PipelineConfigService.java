@@ -16,29 +16,42 @@
 
 package com.thoughtworks.go.server.service;
 
+import com.thoughtworks.go.config.CaseInsensitiveString;
+import com.thoughtworks.go.config.CruiseConfig;
+import com.thoughtworks.go.config.PipelineConfig;
+import com.thoughtworks.go.config.PipelineConfigurationCache;
+import com.thoughtworks.go.i18n.LocalizedMessage;
+import com.thoughtworks.go.listener.PipelineConfigChangedListener;
+import com.thoughtworks.go.server.cache.GoCache;
+import com.thoughtworks.go.server.domain.Username;
+import com.thoughtworks.go.server.initializers.Initializer;
+import com.thoughtworks.go.server.presentation.CanDeleteResult;
+import com.thoughtworks.go.server.service.result.LocalizedOperationResult;
+import com.thoughtworks.go.util.Node;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.CruiseConfig;
-import com.thoughtworks.go.i18n.LocalizedMessage;
-import com.thoughtworks.go.server.presentation.CanDeleteResult;
-import com.thoughtworks.go.util.Node;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 /**
  * @understands providing services around a pipeline configuration
  */
 @Service
-public class PipelineConfigService {
+public class PipelineConfigService implements PipelineConfigChangedListener, Initializer {
     private final GoConfigService goConfigService;
+    private GoCache goCache;
 
     @Autowired
-    public PipelineConfigService(GoConfigService goConfigService) {
+    public PipelineConfigService(GoConfigService goConfigService, GoCache goCache) {
         this.goConfigService = goConfigService;
+        this.goCache = goCache;
+    }
+
+    public void initialize() {
+        goConfigService.register(this);
     }
 
     public Map<CaseInsensitiveString, CanDeleteResult> canDeletePipelines() {
@@ -76,4 +89,27 @@ public class PipelineConfigService {
         return cruiseConfig.getEnvironments().findEnvironmentNameForPipeline(pipelineName);
     }
 
+    public PipelineConfig getPipelineConfig(String pipelineName) {
+        return PipelineConfigurationCache.getInstance().getPipelineConfig(pipelineName);
+    }
+
+    public void updatePipelineConfig(Username currentUser, PipelineConfig pipelineConfig, LocalizedOperationResult result) {
+        try {
+            goConfigService.updatePipeline(pipelineConfig, currentUser, result);
+        } catch (Exception e) {
+            result.internalServerError(LocalizedMessage.string("SAVE_FAILED_WITH_REASON", e.getMessage()));
+        }
+    }
+
+    @Override
+    public void onPipelineConfigChange(PipelineConfig pipelineConfig, String group) {
+        PipelineConfigurationCache.getInstance().onPipelineConfigChange(pipelineConfig, group);
+        goCache.remove("GO_PIPELINE_CONFIGS_ETAGS_CACHE", pipelineConfig.name().toLower());
+    }
+
+    @Override
+    public void onConfigChange(CruiseConfig newCruiseConfig) {
+        PipelineConfigurationCache.getInstance().onConfigChange(newCruiseConfig);
+        goCache.remove("GO_PIPELINE_CONFIGS_ETAGS_CACHE");
+    }
 }

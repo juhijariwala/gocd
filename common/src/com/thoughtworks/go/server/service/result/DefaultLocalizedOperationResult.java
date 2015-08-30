@@ -25,6 +25,10 @@ public class DefaultLocalizedOperationResult implements LocalizedOperationResult
     public void unauthorized(Localizable message, HealthStateType id) {
     }
 
+    @Override
+    public void stale(Localizable message) {
+    }
+
     public void notFound(Localizable message, HealthStateType healthStateType) {
     }
 

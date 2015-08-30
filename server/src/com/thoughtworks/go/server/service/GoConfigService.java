@@ -242,6 +242,19 @@ public class GoConfigService implements Initializer {
         goConfigDao.addAgent(agentConfig);
     }
 
+    public void updatePipeline(final PipelineConfig pipelineConfig, final Username currentUser, final LocalizedOperationResult result) {
+        goConfigDao.updatePipeline(pipelineConfig, result, new PermissionChecker() {
+            @Override
+            public boolean canContinue() {
+                return canEditPipeline(pipelineConfig.name().toString(), currentUser, result);
+            }
+        });
+    }
+
+    public interface PermissionChecker {
+        boolean canContinue();
+    }
+
     public ConfigSaveState updateConfig(UpdateConfigCommand command) {
         return goConfigDao.updateConfig(command);
     }

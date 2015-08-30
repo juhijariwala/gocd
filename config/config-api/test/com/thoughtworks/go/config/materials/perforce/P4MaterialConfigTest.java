@@ -17,7 +17,7 @@
 package com.thoughtworks.go.config.materials.perforce;
 
 import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.materials.AbstractMaterialConfig;
 import com.thoughtworks.go.config.materials.Filter;
 import com.thoughtworks.go.config.materials.IgnoredFiles;
@@ -136,13 +136,13 @@ public class P4MaterialConfigTest {
 
     private void assertNoError(String port, String view, String expectedKeyForError) {
         P4MaterialConfig p4MaterialConfig = new P4MaterialConfig(port, view);
-        p4MaterialConfig.validate(new ValidationContext(null));
+        p4MaterialConfig.validate(new ConfigSaveValidationContext(null));
         assertThat(p4MaterialConfig.errors().on(expectedKeyForError), is(nullValue()));
     }
 
     private void assertError(String port, String view, String expectedKeyForError, String expectedErrorMessage) {
         P4MaterialConfig p4MaterialConfig = new P4MaterialConfig(port, view);
-        p4MaterialConfig.validate(new ValidationContext(null));
+        p4MaterialConfig.validate(new ConfigSaveValidationContext(null));
         assertThat(p4MaterialConfig.errors().on(expectedKeyForError), is(expectedErrorMessage));
     }
 }

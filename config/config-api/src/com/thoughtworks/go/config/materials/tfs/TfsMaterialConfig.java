@@ -67,6 +67,9 @@ public class TfsMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
     public static final String PROJECT_PATH = "projectPath";
     public static final String DOMAIN = "domain";
 
+    public TfsMaterialConfig() {
+        this(new GoCipher());
+    }
 
     public TfsMaterialConfig(GoCipher goCipher) {
         super(TYPE);
@@ -102,6 +105,9 @@ public class TfsMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
         return userName;
     }
 
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
     @Override
     public void setPassword(String password) {
         resetPassword(password);
@@ -132,6 +138,11 @@ public class TfsMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
     }
 
     @Override
+    public void setUrl(String url) {
+        this.url = new UrlArgument(url);
+    }
+
+    @Override
     protected UrlArgument getUrlArgument() {
         return url;
     }
@@ -148,7 +159,7 @@ public class TfsMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
 
     @Override
     protected void validateConcreteScmMaterial(ValidationContext validationContext) {
-        if (StringUtil.isBlank(url.forDisplay())) {
+        if (url == null || StringUtil.isBlank(url.forDisplay())) {
             errors().add(URL, "URL cannot be blank");
         }
         if (StringUtil.isBlank(userName)) {
@@ -212,8 +223,20 @@ public class TfsMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
         return projectPath;
     }
 
+    public void setProjectPath(String projectPath) {
+        this.projectPath = projectPath;
+    }
+
     public String getDomain() {
         return this.domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }
+
+    public void setEncryptedPassword(String encryptedPassword) {
+        this.encryptedPassword = encryptedPassword;
     }
 
     /* Needed although there is a getUserName above */

@@ -19,32 +19,41 @@ package com.thoughtworks.go.server.service;
 import java.util.Map;
 
 import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import com.thoughtworks.go.i18n.LocalizedMessage;
 import com.thoughtworks.go.server.presentation.CanDeleteResult;
+import org.junit.Before;
 import org.junit.Test;
 
 import static com.thoughtworks.go.helper.EnvironmentConfigMother.environment;
 import static com.thoughtworks.go.helper.PipelineConfigMother.createGroup;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class PipelineConfigServiceTest {
 
-    @Test
-    public void shouldBeAbleToGetTheCanDeleteStatusOfAllPipelines() {
+    private PipelineConfigService pipelineConfigService;
+    private CruiseConfig cruiseConfig;
+    private GoConfigService goConfigService;
+
+    @Before
+    public void setUp() throws Exception {
         PipelineConfigs configs = createGroup("group", "pipeline", "in_env");
         downstream(configs);
-        CruiseConfig cruiseConfig = new BasicCruiseConfig(configs);
+        cruiseConfig = new BasicCruiseConfig(configs);
         cruiseConfig.addEnvironment(environment("foo", "in_env"));
 
-        GoConfigService service = mock(GoConfigService.class);
-        when(service.getCurrentConfig()).thenReturn(cruiseConfig);
+        goConfigService = mock(GoConfigService.class);
+        when(goConfigService.getCurrentConfig()).thenReturn(cruiseConfig);
+        when(goConfigService.getConfigForEditing()).thenReturn(cruiseConfig);
+        pipelineConfigService = new PipelineConfigService(goConfigService, null);
+    }
 
-        PipelineConfigService pipelineConfigService = new PipelineConfigService(service);
+    @Test
+    public void shouldBeAbleToGetTheCanDeleteStatusOfAllPipelines() {
 
         Map<CaseInsensitiveString, CanDeleteResult> pipelineToCanDeleteIt = pipelineConfigService.canDeletePipelines();
 
@@ -52,6 +61,14 @@ public class PipelineConfigServiceTest {
         assertThat(pipelineToCanDeleteIt.get(new CaseInsensitiveString("down")), is(new CanDeleteResult(true, LocalizedMessage.string("CAN_DELETE_PIPELINE"))));
         assertThat(pipelineToCanDeleteIt.get(new CaseInsensitiveString("in_env")), is(new CanDeleteResult(false, LocalizedMessage.string("CANNOT_DELETE_PIPELINE_IN_ENVIRONMENT", new CaseInsensitiveString("in_env"), new CaseInsensitiveString("foo")))));
         assertThat(pipelineToCanDeleteIt.get(new CaseInsensitiveString("pipeline")), is(new CanDeleteResult(false, LocalizedMessage.string("CANNOT_DELETE_PIPELINE_USED_AS_MATERIALS", new CaseInsensitiveString("pipeline"), new CaseInsensitiveString("down")))));
+    }
+
+    @Test
+    public void shouldGetPipelineConfigBasedOnName() {
+        String pipelineName = "pipeline";
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+        PipelineConfig pipeline = pipelineConfigService.getPipelineConfig(pipelineName);
+        assertThat(pipeline, is(cruiseConfig.pipelineConfigByName(new CaseInsensitiveString(pipelineName))));
     }
 
     private void downstream(PipelineConfigs configs) {

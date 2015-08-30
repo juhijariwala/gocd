@@ -20,11 +20,14 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.thoughtworks.go.config.TrackingTool;
+import com.thoughtworks.go.config.ValidationContext;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
 
 public class TrackingToolTest {
     private TrackingTool trackingTool;
@@ -84,5 +87,13 @@ public class TrackingToolTest {
 
         TrackingTool config = new TrackingTool("http://mingle05/projects/cce/cards/${ID}", "#(\\d+)");
         assertThat(config.render(toRender), is(toRender));
+    }
+
+    @Test
+    public void shouldValidate(){
+        TrackingTool tool = new TrackingTool();
+        tool.validateTree(null);
+        assertThat(tool.errors().on(TrackingTool.LINK), is("Link should be populated"));
+        assertThat(tool.errors().on(TrackingTool.REGEX), is("Regex should be populated"));
     }
 }

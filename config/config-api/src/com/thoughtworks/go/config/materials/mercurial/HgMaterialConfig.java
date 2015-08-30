@@ -38,7 +38,7 @@ public class HgMaterialConfig extends ScmMaterialConfig implements ParamsAttribu
     public static final String TYPE = "HgMaterial";
     public static final String URL = "url";
 
-    private HgMaterialConfig() {
+    public HgMaterialConfig() {
         super(TYPE);
     }
 
@@ -89,6 +89,11 @@ public class HgMaterialConfig extends ScmMaterialConfig implements ParamsAttribu
     }
 
     @Override
+    public void setUrl(String hgUrl) {
+        this.url = new HgUrlArgument(hgUrl);
+    }
+
+    @Override
     public UrlArgument getUrlArgument() {
         return url;
     }
@@ -128,7 +133,7 @@ public class HgMaterialConfig extends ScmMaterialConfig implements ParamsAttribu
 
     @Override
     protected void validateConcreteScmMaterial(ValidationContext validationContext) {
-        if (StringUtil.isBlank(url.forDisplay())) {
+        if (url == null || StringUtil.isBlank(url.forDisplay())) {
             errors().add(URL, "URL cannot be blank");
         }
     }

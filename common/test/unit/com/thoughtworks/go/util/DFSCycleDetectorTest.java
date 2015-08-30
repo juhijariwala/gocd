@@ -16,57 +16,67 @@
 
 package com.thoughtworks.go.util;
 
-import java.util.Hashtable;
-
 import com.thoughtworks.go.config.CaseInsensitiveString;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertThat;
+
+import java.util.ArrayList;
+import java.util.Hashtable;
+
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class DFSCycleDetectorTest {
     public Hashtable<CaseInsensitiveString, Node> hashtable;
     private DFSCycleDetector project;
+    private PipelineDependencyState state;
 
     @Before
     public void setUp() {
-        hashtable = new Hashtable<CaseInsensitiveString, Node>();
         project = new DFSCycleDetector();
+        state = mock(PipelineDependencyState.class);
     }
 
     @Test
-    public void shouldThrowExceptionWhenCycleDepencyFound() throws Exception {
-        createNode(new CaseInsensitiveString("a"), new CaseInsensitiveString("b"));
-        createNode(new CaseInsensitiveString("b"), new CaseInsensitiveString("c"));
-        createNode(new CaseInsensitiveString("c"), new CaseInsensitiveString("a"));
+    public void shouldThrowExceptionWhenCycleDependencyFound() throws Exception {
+        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new CaseInsensitiveString("b")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new CaseInsensitiveString("c")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("c"))).thenReturn(new Node(new CaseInsensitiveString("a")));
+        when(state.hasPipeline(new CaseInsensitiveString("a"))).thenReturn(true);
+        when(state.hasPipeline(new CaseInsensitiveString("b"))).thenReturn(true);
+        when(state.hasPipeline(new CaseInsensitiveString("c"))).thenReturn(true);
+
         try {
-            project.topoSort(new CaseInsensitiveString("a"), hashtable);
+            project.topoSort(new CaseInsensitiveString("a"), state);
         } catch (Exception e) {
             assertThat(e.getMessage(), is("Circular dependency: a <- c <- b <- a"));
         }
     }
 
     @Test
-    public void shouldNotThrowExceptionWhenCycleDepencyFound() throws Exception {
-        createNode(new CaseInsensitiveString("a"), new CaseInsensitiveString("b"));
-        createNode(new CaseInsensitiveString("b"), new CaseInsensitiveString("c"));
-        createNode(new CaseInsensitiveString("c"));
-        project.topoSort(new CaseInsensitiveString("a"), hashtable);
+    public void shouldNotThrowExceptionWhenCycleDependencyNotFound() throws Exception {
+        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new CaseInsensitiveString("b")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new CaseInsensitiveString("c")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("c"))).thenReturn(new Node(new ArrayList<CaseInsensitiveString>()));
+        when(state.hasPipeline(new CaseInsensitiveString("a"))).thenReturn(true);
+        when(state.hasPipeline(new CaseInsensitiveString("b"))).thenReturn(true);
+        when(state.hasPipeline(new CaseInsensitiveString("c"))).thenReturn(true);
+        project.topoSort(new CaseInsensitiveString("a"), state);
     }
 
     @Test public void shouldThrowExceptionWhenDependencyExistsWithUnknownPipeline() throws Exception {
-        createNode(new CaseInsensitiveString("a"), new CaseInsensitiveString("b"));
-        createNode(new CaseInsensitiveString("b"), new CaseInsensitiveString("z"));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new CaseInsensitiveString("b")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new CaseInsensitiveString("z")));
+        when(state.hasPipeline(new CaseInsensitiveString("a"))).thenReturn(true);
+        when(state.hasPipeline(new CaseInsensitiveString("b"))).thenReturn(true);
+        when(state.hasPipeline(new CaseInsensitiveString("z"))).thenReturn(false);
+
         try {
-            project.topoSort(new CaseInsensitiveString("a"), hashtable);
+            project.topoSort(new CaseInsensitiveString("a"), state);
         } catch (Exception e) {
             assertThat(e.getMessage(), is("Pipeline \"z\" does not exist. It is used from pipeline \"b\"."));
         }
-    }
-
-    private Node createNode(CaseInsensitiveString name, CaseInsensitiveString... deps) {
-        Node node = new Node(deps);
-        hashtable.put(name, node);
-        return node;
     }
 }

@@ -202,6 +202,11 @@ public class AbstractMaterialConfigTest {
             throw new UnsupportedOperationException();
         }
 
+        @Override
+        public void setAutoUpdate(boolean autoUpdate) {
+            throw new UnsupportedOperationException();
+        }
+
         public String getUriForDisplay() {
             throw new UnsupportedOperationException();
         }

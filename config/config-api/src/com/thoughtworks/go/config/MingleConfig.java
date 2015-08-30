@@ -68,6 +68,10 @@ public class MingleConfig implements ParamsAttributeAware, Validatable, CommentR
         this.projectIdentifier = projectIdentifier;
     }
 
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
+    }
     public void validate(ValidationContext validationContext) {
         if (isDefined() && XmlUtils.doesNotMatchUsingXsdRegex(MINGLE_URL_PATTERN_REGEX, baseUrl)) {
             configErrors.add(BASE_URL, "Should be a URL starting with https://");
@@ -106,6 +110,10 @@ public class MingleConfig implements ParamsAttributeAware, Validatable, CommentR
         return projectIdentifier;
     }
 
+    public void setProjectIdentifier(String projectIdentifier) {
+        this.projectIdentifier = projectIdentifier;
+    }
+
     public String getQuotedMql() {
         String mqlString = mqlCriteria.equals(new MqlCriteria()) ? "" : mqlCriteria.getMql();
         return StringUtil.quoteJavascriptString(mqlString);
@@ -119,8 +127,16 @@ public class MingleConfig implements ParamsAttributeAware, Validatable, CommentR
         return baseUrl;
     }
 
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
     public MqlCriteria getMqlCriteria() {
         return mqlCriteria;
+    }
+
+    public void setMqlCriteria(String mql) {
+        this.mqlCriteria = new MqlCriteria(mql);
     }
 
     @Override

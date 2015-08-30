@@ -37,6 +37,15 @@ public class ArtifactPropertiesGenerators extends BaseCollection<ArtifactPropert
         super(generators);
     }
 
+    public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
+        boolean isValid = errors().isEmpty();
+
+        for (ArtifactPropertiesGenerator artifactPropertiesGenerator : this) {
+            isValid = artifactPropertiesGenerator.validateTree(validationContext) && isValid;
+        }
+        return isValid;
+    }
+
     public void validate(ValidationContext validationContext) {
     }
 

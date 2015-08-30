@@ -19,7 +19,7 @@ package com.thoughtworks.go.config.materials;
 import java.util.Collections;
 import java.util.HashMap;
 
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import org.apache.commons.collections.map.SingletonMap;
 import org.junit.Test;
 
@@ -49,7 +49,7 @@ public class ScmMaterialConfigTest {
     @Test
     public void shouldNotValidateEmptyDestinationFolder() {
         material.setConfigAttributes(Collections.singletonMap(ScmMaterialConfig.FOLDER, ""));
-        material.validate(new ValidationContext(null));
+        material.validate(new ConfigSaveValidationContext(null));
         assertThat(material.errors.isEmpty(), is(true));
     }
 

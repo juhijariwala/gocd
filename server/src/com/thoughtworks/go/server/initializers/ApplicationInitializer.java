@@ -78,6 +78,7 @@ public class ApplicationInitializer implements ApplicationListener<ContextRefres
     @Autowired private RailsAssetsService railsAssetsService;
     @Autowired private FeatureToggleService featureToggleService;
     @Autowired private CcTrayActivityListener ccTrayActivityListener;
+    @Autowired private PipelineConfigService pipelineConfigService;
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
@@ -96,6 +97,7 @@ public class ApplicationInitializer implements ApplicationListener<ContextRefres
             goFileConfigDataSource.upgradeIfNecessary();
             mergedGoConfig.loadConfigIfNull();
             goConfigService.initialize();
+            pipelineConfigService.initialize();
 
             //artifacts
             artifactsDirHolder.initialize();

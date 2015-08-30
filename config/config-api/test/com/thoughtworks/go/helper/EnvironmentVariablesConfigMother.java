@@ -16,13 +16,23 @@
 
 package com.thoughtworks.go.helper;
 
+import com.thoughtworks.go.config.EnvironmentVariableConfig;
 import com.thoughtworks.go.config.EnvironmentVariablesConfig;
+import com.thoughtworks.go.security.GoCipher;
 
 public class EnvironmentVariablesConfigMother {
     public static EnvironmentVariablesConfig env(String name, String value) {
         EnvironmentVariablesConfig config = new EnvironmentVariablesConfig();
         config.add(name, value);
         return config;
+    }
+
+    public static EnvironmentVariablesConfig environmentVariables() {
+        EnvironmentVariablesConfig variables = new EnvironmentVariablesConfig();
+        GoCipher goCipher = new GoCipher();
+        variables.add(new EnvironmentVariableConfig(goCipher, "MULTIPLE_LINES", "multiplelines", true));
+        variables.add(new EnvironmentVariableConfig(goCipher, "COMPLEX", "This has very <complex> data", false));
+        return variables;
     }
 
     public static EnvironmentVariablesConfig env(String[] names, String[] values) {

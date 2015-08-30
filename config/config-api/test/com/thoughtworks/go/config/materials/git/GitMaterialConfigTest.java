@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.materials.AbstractMaterialConfig;
 import com.thoughtworks.go.config.materials.Filter;
 import com.thoughtworks.go.config.materials.IgnoredFiles;
@@ -56,7 +56,7 @@ public class GitMaterialConfigTest {
     @Test
     public void validate_shouldEnsureUrlIsNotBlank() {
         GitMaterialConfig gitMaterialConfig = new GitMaterialConfig("");
-        gitMaterialConfig.validate(new ValidationContext(null));
+        gitMaterialConfig.validate(new ConfigSaveValidationContext(null));
         assertThat(gitMaterialConfig.errors().on(GitMaterialConfig.URL), is("URL cannot be blank"));
     }
 
@@ -66,4 +66,5 @@ public class GitMaterialConfigTest {
         gitMaterialConfig.setConfigAttributes(null);
         assertThat(gitMaterialConfig, is(new GitMaterialConfig("")));
     }
+
 }

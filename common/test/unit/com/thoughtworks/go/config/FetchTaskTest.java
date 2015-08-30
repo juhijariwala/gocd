@@ -22,6 +22,7 @@ import java.util.Date;
 import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.Materials;
 import com.thoughtworks.go.config.materials.dependency.DependencyMaterial;
+import com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig;
 import com.thoughtworks.go.config.remote.FileConfigOrigin;
 import com.thoughtworks.go.config.remote.RepoConfigOrigin;
 import com.thoughtworks.go.domain.MaterialRevision;
@@ -99,19 +100,20 @@ public class FetchTaskTest {
         downstream.setOrigin(new FileConfigOrigin());
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage2"), new CaseInsensitiveString("uppest-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
 
         assertThat(task.errors().isEmpty(), is(false));
-        assertThat(task.errors().on(FetchTask.ORIGIN),startsWith("Pipeline \"downstream\" tries to fetch artifact from job \"uppest_stream :: uppest-stage2 :: uppest-job2\" which is defined in"));
+        assertThat(task.errors().on(FetchTask.ORIGIN), startsWith("Pipeline \"downstream\" tries to fetch artifact from job \"uppest_stream :: uppest-stage2 :: uppest-job2\" which is defined in"));
 
     }
+
     @Test
     public void validate_shouldNotErrorWhenReferencingFilePipelineFromConfigRepositoryPipeline() {
         uppestStream.setOrigin(new FileConfigOrigin());
         downstream.setOrigin(new RepoConfigOrigin());
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage2"), new CaseInsensitiveString("uppest-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
 
         assertThat(task.errors().isEmpty(), is(true));
     }
@@ -121,7 +123,7 @@ public class FetchTaskTest {
         downstream.setOrigin(new RepoConfigOrigin());
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage2"), new CaseInsensitiveString("uppest-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
 
         assertThat(task.errors().isEmpty(), is(true));
     }
@@ -131,7 +133,7 @@ public class FetchTaskTest {
         downstream.setOrigin(new FileConfigOrigin());
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage2"), new CaseInsensitiveString("uppest-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
 
         assertThat(task.errors().isEmpty(), is(true));
     }
@@ -141,7 +143,7 @@ public class FetchTaskTest {
         StageConfig stage = upstream.getFirstStageConfig();
         JobConfig job = stage.getJobs().get(0);
         FetchTask task = new FetchTask(upstream.name(), stage.name(), job.name(), "src", "dest");
-        task.validate(ValidationContext.forChain(upstream, stage, job));
+        task.validate(ConfigSaveValidationContext.forChain(upstream, stage, job));
 
         assertThat(task.errors().isEmpty(), is(true));
     }
@@ -178,13 +180,17 @@ public class FetchTaskTest {
         StageConfig stage = template.get(0);
         JobConfig job = stage.getJobs().get(0);
         FetchTask task = new FetchTask(template.name(), stage.name(), job.name(), src, dest);
-        task.validate(ValidationContext.forChain(template, stage, job));
+        ValidationContext context = ConfigSaveValidationContext.forChain(config, template, stage, job);
+        task.validate(context);
 
+//        FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "..", "..");
+//        ValidationContext context = ConfigSaveValidationContext.forChain(config, new TemplatesConfig(), downstream.getStage(new CaseInsensitiveString("stage")));
+//        task.validate(context);
         assertThat(task.errors().isEmpty(), is(false));
-        String messageForSrc = String.format("Task of job '%s' in stage '%s' of template '%s' has path '%s' which is outside the working directory.", job.name(), stage.name(), template.name(), src);
+        String messageForSrc = String.format("Task of job '%s' in stage '%s' of template '%s' has src path '%s' which is outside the working directory.", job.name(), stage.name(), template.name(), src);
         assertThat(task.errors().on(FetchTask.SRC), is(messageForSrc));
 
-        String messageForDest = String.format("Task of job '%s' in stage '%s' of template '%s' has path '%s' which is outside the working directory.", job.name(), stage.name(), template.name(), dest);
+        String messageForDest = String.format("Task of job '%s' in stage '%s' of template '%s' has dest path '%s' which is outside the working directory.", job.name(), stage.name(), template.name(), dest);
         assertThat(task.errors().on(FetchTask.DEST), is(messageForDest));
     }
 
@@ -197,18 +203,18 @@ public class FetchTaskTest {
         } else {
             task.setSrcfile(source);
         }
-        task.validate(ValidationContext.forChain(upstream, stage, job));
+        task.validate(ConfigSaveValidationContext.forChain(upstream, stage, job));
 
         assertThat(task.errors().isEmpty(), is(false));
         String path = propertyName.equals(FetchTask.SRC) ? source : destination;
-        String message = String.format("Task of job '%s' in stage '%s' of pipeline '%s' has path '%s' which is outside the working directory.", job.name(), stage.name(), upstream.name(), path);
+        String message = String.format("Task of job '%s' in stage '%s' of pipeline '%s' has %s path '%s' which is outside the working directory.", job.name(), stage.name(), upstream.name(), propertyName, path);
         assertThat(task.errors().on(propertyName), is(message));
     }
 
     @Test
     public void validate_shouldPopulateErrorOnSrcFileOrSrcDirOrDestIfIsNotAValidFilePathPattern() {
         FetchTask task = new FetchTask(new CaseInsensitiveString(""), new CaseInsensitiveString(""), new CaseInsensitiveString(""), "", "");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage")), downstream.getStage(
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage")), downstream.getStage(
                 new CaseInsensitiveString("stage")).getJobs().get(0)));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Stage is a required field."));
@@ -218,14 +224,14 @@ public class FetchTaskTest {
     @Test
     public void validate_shouldNotTryAndValidateWhenWithinTemplate() throws Exception {
         FetchTask task = new FetchTask(new CaseInsensitiveString("dummy"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new TemplatesConfig(), downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new TemplatesConfig(), downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), Is.is(true));
     }
 
     @Test
     public void validate_shouldValidateBlankStageAndJobWhenWithinTemplate() throws Exception {
         FetchTask task = new FetchTask(new CaseInsensitiveString("dummy"), new CaseInsensitiveString(""), new CaseInsensitiveString(""), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new TemplatesConfig(), downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new TemplatesConfig(), downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), Is.is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Stage is a required field."));
         assertThat(task.errors().on(FetchTask.JOB), is("Job is a required field."));
@@ -234,7 +240,7 @@ public class FetchTaskTest {
     @Test
     public void shouldPopulateErrorsIfFetchArtifactFromPipelineThatIsNotDependency() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("dummy"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.PIPELINE_NAME), is("Pipeline \"downstream\" tries to fetch artifact from pipeline "
                 + "\"dummy\" which is not an upstream pipeline"));
@@ -243,7 +249,7 @@ public class FetchTaskTest {
     @Test
     public void shouldPopulateErrorsIfFetchArtifactDoesNotHaveStageAndOrJobDefined() {
         FetchTask task = new FetchTask(new CaseInsensitiveString(""), new CaseInsensitiveString(""), new CaseInsensitiveString(""), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, new StageConfig(), new JobConfig()));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, new StageConfig(), new JobConfig()));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Stage is a required field."));
         assertThat(task.errors().on(FetchTask.JOB), is("Job is a required field."));
@@ -252,21 +258,21 @@ public class FetchTaskTest {
     @Test
     public void shouldBeValidWhenFetchArtifactIsFromAnyAncestorStage_onTheUpstreamPipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage2"), new CaseInsensitiveString("uppest-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
     @Test
     public void shouldBeValidWhenFetchArtifactIsFromAnyAncestorStage_s_predecessorStage__onTheUpstreamPipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage1"), new CaseInsensitiveString("uppest-job1"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
     @Test
     public void should_NOT_BeValidWhenFetchArtifactIsFromAnyAncestorStage_s_successorStage_onTheUpstreamPipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage3"), new CaseInsensitiveString("uppest-job3"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Pipeline \"downstream\" tries to fetch artifact from stage \"uppest_stream :: uppest-stage3\" which does not complete before \"downstream\" pipeline's dependencies."));
     }
@@ -274,7 +280,7 @@ public class FetchTaskTest {
     @Test
     public void should_NOT_BeValidWhen_pathFromAncestor_isInvalid_becauseRefferedPipelineIsNotAnAncestor() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("random_pipeline/upstream"), new CaseInsensitiveString("random-stage1"), new CaseInsensitiveString("random-job1"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.PIPELINE_NAME), is("Pipeline named 'random_pipeline' exists, but is not an ancestor of 'downstream' as declared in 'random_pipeline/upstream'."));
     }
@@ -283,7 +289,7 @@ public class FetchTaskTest {
     public void should_NOT_BeValidWhen_NO_pathFromAncestorIsGiven_butAncestorPipelineIsBeingFetchedFrom() {
         FetchTask task = new FetchTask(null, new CaseInsensitiveString("uppest-stage3"), new CaseInsensitiveString("uppest-job3"), "src", "dest");
         StageConfig stage = downstream.getStage(new CaseInsensitiveString("stage"));
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, stage, stage.getJobs().get(0)));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, stage, stage.getJobs().get(0)));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Pipeline \"downstream\" tries to fetch artifact from stage \"downstream :: uppest-stage3\" which does not exist. It is used in stage \"stage\" inside job \"job\"."));
     }
@@ -298,11 +304,11 @@ public class FetchTaskTest {
         downstream.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.dependencyMaterialConfig("upstream", "up-stage1"), MaterialConfigsMother.dependencyMaterialConfig("upstreams_peer", "peer-stage")));
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstream"), new CaseInsensitiveString("uppest-stage1"), new CaseInsensitiveString("uppest-job1"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
 
         task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstreams_peer"), new CaseInsensitiveString("uppest-stage1"), new CaseInsensitiveString("uppest-job1"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
@@ -317,7 +323,25 @@ public class FetchTaskTest {
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream/uppest_stream"), new CaseInsensitiveString("up-stage1"), new CaseInsensitiveString("up-job1"), "src", "dest");
         StageConfig stage = downstream.getStage(new CaseInsensitiveString("stage"));
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, stage, stage.getJobs().get(0)));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, stage, stage.getJobs().get(0)));
+        assertThat(task.errors().isEmpty(), is(false));
+        assertThat(task.errors().on(FetchTask.PIPELINE_NAME), is("Pipeline named 'uppest_stream' exists, but is not an ancestor of 'downstream' as declared in 'upstream/uppest_stream'."));
+    }
+
+    @Test
+    public void should_NOT_BeValidWhen_ImmediateParentDeclaredInPathFromAncestor_isNotAParentPipeline_PipelineConfigValidationContext() {
+        PipelineConfig upstreamsPeer = config.pipelineConfigByName(new CaseInsensitiveString("upstreams_peer"));
+        upstreamsPeer.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.dependencyMaterialConfig("uppest_stream", "uppest-stage1")));
+        upstreamsPeer.add(StageConfigMother.stageConfig("peer-stage", new JobConfigs(new JobConfig("peer-job"))));
+
+        downstream = config.pipelineConfigByName(new CaseInsensitiveString("downstream"));
+        downstream.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.dependencyMaterialConfig("upstream", "up-stage1"), MaterialConfigsMother.dependencyMaterialConfig("upstreams_peer", "peer-stage")));
+
+        FetchTask task = new FetchTask(new CaseInsensitiveString("upstream/uppest_stream"), new CaseInsensitiveString("up-stage1"), new CaseInsensitiveString("up-job1"), "src", "dest");
+        StageConfig stage = downstream.getStage(new CaseInsensitiveString("stage"));
+        PipelineConfigurationCache.getInstance().onConfigChange(config);
+
+        task.validateTree(PipelineConfigSaveValidationContext.forChain(downstream, stage, stage.getJobs().get(0)));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.PIPELINE_NAME), is("Pipeline named 'uppest_stream' exists, but is not an ancestor of 'downstream' as declared in 'upstream/uppest_stream'."));
     }
@@ -332,11 +356,11 @@ public class FetchTaskTest {
         downstream.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.dependencyMaterialConfig("upstream", "up-stage1"), MaterialConfigsMother.dependencyMaterialConfig("upstreams_peer", "peer-stage")));
 
         FetchTask task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstreams_peer"), new CaseInsensitiveString("uppest-stage1"), new CaseInsensitiveString("uppest-job1"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
 
         task = new FetchTask(new CaseInsensitiveString("uppest_stream/upstreams_peer"), new CaseInsensitiveString("uppest-stage2"), new CaseInsensitiveString("uppest-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Pipeline \"downstream\" tries to fetch artifact from stage \"uppest_stream :: uppest-stage2\" which does not complete before \"downstream\" pipeline's dependencies."));
     }
@@ -344,7 +368,7 @@ public class FetchTaskTest {
     @Test
     public void shouldFailWhenFetchArtifactIsFromAnyStage_AFTER_theDependencyStageOnTheUpstreamPipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("up-stage2"), new CaseInsensitiveString("up-job2"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Pipeline \"downstream\" tries to fetch artifact from stage \"upstream :: up-stage2\" which does not complete before \"downstream\" pipeline's dependencies."));
     }
@@ -352,7 +376,7 @@ public class FetchTaskTest {
     @Test
     public void shouldPopulateErrorIfFetchArtifactFromDependentPipelineButStageDoesNotExist() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage-does-not-exist"), new CaseInsensitiveString("job"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage")), downstream.getStage(
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage")), downstream.getStage(
                 new CaseInsensitiveString("stage")), downstream.getStage(new CaseInsensitiveString("stage")).getJobs().get(0)));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.STAGE), is("Pipeline \"downstream\" tries to fetch artifact from stage "
@@ -362,7 +386,7 @@ public class FetchTaskTest {
     @Test
     public void shouldPopulateErrorIfFetchArtifactFromDependentPipelineButJobNotExist() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job-does-not-exist"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.JOB), is("Pipeline \"downstream\" tries to fetch artifact from job "
                 + "\"upstream :: stage :: job-does-not-exist\" which does not exist."));
@@ -371,21 +395,21 @@ public class FetchTaskTest {
     @Test
     public void shouldBeValidIfFetchArtifactUsingADependantPipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("up-stage1"), new CaseInsensitiveString("up-job1"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
     @Test
     public void shouldBeValidIfFetchArtifactUsingAStageBeforeCurrentInTheSamePipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("up-stage1"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("up-stage1"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
     @Test
     public void shouldBeValidIfFetchArtifactDoesNotSpecifyPipeline() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("up-stage1"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("up-stage1"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
@@ -395,7 +419,7 @@ public class FetchTaskTest {
     @Test
     public void shouldPopulateErrorsIfFetchArtifactUsingJobNameWithDifferentCase() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("JOB"), "src", "dest");
-        task.validate(ValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), downstream, downstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(true));
     }
 
@@ -403,7 +427,7 @@ public class FetchTaskTest {
     public void shouldPopulateErrorIfSrcFileAndSrcDirBothAreDefined() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "src_file", "dest");
         task.setSrcdir("src_dir");
-        task.validate(ValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.SRC), is("Only one of srcfile or srcdir is allowed at a time"));
     }
@@ -412,9 +436,24 @@ public class FetchTaskTest {
     public void shouldPopulateErrorIfBothSrcFileAndSrcDirAreNotDefined() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "src_file", "dest");
         task.setSrcfile(null);
-        task.validate(ValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("stage"))));
+        task.validate(ConfigSaveValidationContext.forChain(config, upstream, upstream.getStage(new CaseInsensitiveString("stage"))));
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.SRC), is("Should provide either srcdir or srcfile"));
+    }
+
+    @Test
+    public void shouldPopulateErrorOnSrcFileOrSrcDirOrDestIfIsNotAValidFilePathPattern() {
+        FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "..", "..");
+        StageConfig stage = upstream.getStage(new CaseInsensitiveString("stage"));
+        ValidationContext context = ConfigSaveValidationContext.forChain(config, upstream, stage, stage.getJobs().first());
+        task.validate(context);
+        assertThat(task.errors().isEmpty(), is(false));
+        assertThat(task.errors().on(FetchTask.SRC), is("Task of job 'job' in stage 'stage' of pipeline 'upstream' has src path '..' which is outside the working directory."));
+        assertThat(task.errors().on(FetchTask.DEST), is("Task of job 'job' in stage 'stage' of pipeline 'upstream' has dest path '..' which is outside the working directory."));
+        task.setSrcfile(null);
+        task.setSrcdir("..");
+        task.validate(context);
+        assertThat(task.errors().on(FetchTask.SRC), is("Task of job 'job' in stage 'stage' of pipeline 'upstream' has src path '..' which is outside the working directory."));
     }
 
     @Test
@@ -595,6 +634,65 @@ public class FetchTaskTest {
         assertThat(fetchTask.getPropertiesForDisplay(), hasItems(new TaskProperty("STAGE_NAME", "bar-stage", "stage_name"), new TaskProperty("JOB_NAME", "baz-job", "job_name"),
                 new TaskProperty("SRC_FILE", "quux.c", "src_file"), new TaskProperty("DEST_FILE", "bang-file", "dest_file")));
         assertThat(fetchTask.getPropertiesForDisplay().size(), is(4));
+    }
+
+    @Test
+    public void shouldNotFailValidationIfUpstreamExists_PipelineConfigSave(){
+        PipelineConfig upstream = new PipelineConfig(new CaseInsensitiveString("upstream-pipeline"),
+                new MaterialConfigs(), new StageConfig(new CaseInsensitiveString("upstream-stage"),
+                new JobConfigs(new JobConfig(new CaseInsensitiveString("upstream-job")))));
+        JobConfig job = new JobConfig(new CaseInsensitiveString("downstream-job"));
+        FetchTask fetchTask = new FetchTask(new CaseInsensitiveString("upstream-pipeline"),
+                new CaseInsensitiveString("upstream-stage"),
+                new CaseInsensitiveString("upstream-job"), "quux.c", "bang-file");
+        job.addTask(fetchTask);
+        PipelineConfig downstream = new PipelineConfig(new CaseInsensitiveString("downstream-pipeline"),
+                new MaterialConfigs(new DependencyMaterialConfig(upstream.name(), upstream.getFirstStageConfig().name())),
+                new StageConfig(new CaseInsensitiveString("downstream-stage"), new JobConfigs(job)));
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(upstream, downstream)));
+
+        fetchTask.validateTree(PipelineConfigSaveValidationContext.forChain(downstream, downstream.getFirstStageConfig(), downstream.getFirstStageConfig().getJobs().first()));
+        assertThat(fetchTask.errors().isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldFailValidationIfFetchArtifactPipelineIsNotAMaterial_PipelineConfigSave(){
+        PipelineConfig upstream = new PipelineConfig(new CaseInsensitiveString("upstream-pipeline"),
+                new MaterialConfigs(), new StageConfig(new CaseInsensitiveString("upstream-stage"),
+                new JobConfigs(new JobConfig(new CaseInsensitiveString("upstream-job")))));
+        JobConfig job = new JobConfig(new CaseInsensitiveString("downstream-job"));
+        FetchTask fetchTask = new FetchTask(new CaseInsensitiveString("upstream-pipeline"),
+                new CaseInsensitiveString("upstream-stage"),
+                new CaseInsensitiveString("upstream-job"), "quux.c", "bang-file");
+        job.addTask(fetchTask);
+        PipelineConfig downstream = new PipelineConfig(new CaseInsensitiveString("downstream-pipeline"),
+                new MaterialConfigs(),
+                new StageConfig(new CaseInsensitiveString("downstream-stage"), new JobConfigs(job)));
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(upstream, downstream)));
+
+        fetchTask.validateTree(PipelineConfigSaveValidationContext.forChain(downstream, downstream.getFirstStageConfig(), downstream.getFirstStageConfig().getJobs().first()));
+        assertThat(fetchTask.errors().isEmpty(), is(false));
+        assertThat(fetchTask.errors().on(FetchTask.PIPELINE_NAME), is("Pipeline \"downstream-pipeline\" tries to fetch artifact from pipeline \"upstream-pipeline\" which is not an upstream pipeline"));
+    }
+
+    @Test
+    public void shouldFailValidationIfFetchArtifactPipelineAndStageExistsButJobDoesNot_PipelineConfigSave(){
+        PipelineConfig upstream = new PipelineConfig(new CaseInsensitiveString("upstream-pipeline"),
+                new MaterialConfigs(), new StageConfig(new CaseInsensitiveString("upstream-stage"),
+                new JobConfigs(new JobConfig(new CaseInsensitiveString("upstream-job")))));
+        JobConfig job = new JobConfig(new CaseInsensitiveString("downstream-job"));
+        FetchTask fetchTask = new FetchTask(new CaseInsensitiveString("upstream-pipeline"),
+                new CaseInsensitiveString("upstream-stage"),
+                new CaseInsensitiveString("some-random-job"), "quux.c", "bang-file");
+        job.addTask(fetchTask);
+        PipelineConfig downstream = new PipelineConfig(new CaseInsensitiveString("downstream-pipeline"),
+                new MaterialConfigs(new DependencyMaterialConfig(upstream.name(), upstream.getFirstStageConfig().name())),
+                new StageConfig(new CaseInsensitiveString("downstream-stage"), new JobConfigs(job)));
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(upstream, downstream)));
+
+        fetchTask.validateTree(PipelineConfigSaveValidationContext.forChain(downstream, downstream.getFirstStageConfig(), downstream.getFirstStageConfig().getJobs().first()));
+        assertThat(fetchTask.errors().isEmpty(), is(false));
+        assertThat(fetchTask.errors().on(FetchTask.JOB), is("Pipeline \"downstream-pipeline\" tries to fetch artifact from job \"upstream-pipeline :: upstream-stage :: some-random-job\" which does not exist."));
     }
 
     private Pipeline pipeline(String label) {

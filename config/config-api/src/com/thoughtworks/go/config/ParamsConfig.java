@@ -31,6 +31,9 @@ public class ParamsConfig extends BaseCollection<ParamConfig> implements Validat
 
     public ParamsConfig() {}
 
+    public ParamsConfig(ParamConfig... items) {
+        super(items);
+    }
     public ParamsConfig(ParamsConfig paramsConfig) {
         this();
         addAll(paramsConfig);
@@ -47,6 +50,15 @@ public class ParamsConfig extends BaseCollection<ParamConfig> implements Validat
         return myCopy;
     }
 
+    public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
+        validate(validationContext);
+        boolean isValid = errors().isEmpty();
+
+        for (ParamConfig paramConfig : this) {
+            isValid = paramConfig.validateTree(validationContext) && isValid;
+        }
+        return isValid;
+    }
     public void validate(ValidationContext validationContext) {
         HashMap<String, ParamConfig> paramConfigMap = new HashMap<String, ParamConfig>();
         for (ParamConfig paramConfig : this) {

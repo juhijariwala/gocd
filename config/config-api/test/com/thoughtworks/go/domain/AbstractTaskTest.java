@@ -19,11 +19,9 @@ package com.thoughtworks.go.domain;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.thoughtworks.go.config.AbstractTask;
-import com.thoughtworks.go.config.ExecTask;
-import com.thoughtworks.go.config.FetchTask;
-import com.thoughtworks.go.config.OnCancelConfig;
-import com.thoughtworks.go.config.RunIfConfig;
+import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.domain.config.Arguments;
+import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.service.TaskFactory;
 import org.junit.Test;
 
@@ -82,11 +80,11 @@ public class AbstractTaskTest {
 
         assertThat(task.hasCancelTask(), is(true));
 
-        assertThat((ExecTask) task.cancelTask(), is(new ExecTask("sudo", "ls -la", "working_dir")));
-
-        assertThat(task.cancelTask().getConditions().match(RunIfConfig.ANY), is(true));
-        assertThat(task.cancelTask().getConditions().match(RunIfConfig.FAILED), is(true));
-        assertThat(task.cancelTask().getConditions().match(RunIfConfig.PASSED), is(true));
+        ExecTask expected = new ExecTask("sudo", "ls -la", "working_dir");
+        expected.getConditions().add(RunIfConfig.ANY);
+        expected.getConditions().add(RunIfConfig.FAILED);
+        expected.getConditions().add(RunIfConfig.PASSED);
+        assertThat((ExecTask) task.cancelTask(), is(expected));
     }
 
     @Test
@@ -176,6 +174,24 @@ public class AbstractTaskTest {
     public void shouldReturnPassedByDefaultWhenNoRunIfConfigIsSpecified() {
         AbstractTask execTask = new ExecTask("ls", "-la", "42");
         assertThat(execTask.getConditionsForDisplay(), is("Passed"));
+    }
+
+    @Test
+    public void shouldValidateTree(){
+        String pipelineName = "p1";
+        PipelineConfig pipelineConfig = GoConfigMother.configWithPipelines(pipelineName).pipelineConfigByName(new CaseInsensitiveString(pipelineName));
+        StageConfig stageConfig = pipelineConfig.getStages().get(0);
+        JobConfig jobConfig = stageConfig.getJobs().get(0);
+
+        AbstractTask execTask = new ExecTask("ls", "-la", "42");
+        AntTask antTask = new AntTask();
+        antTask.setWorkingDirectory("/abc");
+        execTask.setCancelTask(antTask);
+        PipelineConfigSaveValidationContext context = PipelineConfigSaveValidationContext.forChain(pipelineConfig, stageConfig, jobConfig);
+        assertThat(execTask.validateTree(context), is(false));
+        assertThat(antTask.errors().isEmpty(), is(false));
+        assertThat(antTask.errors().get(AntTask.WORKING_DIRECTORY).size(), is(1));
+        assertThat(antTask.errors().get(AntTask.WORKING_DIRECTORY).contains("Task of job 'job' in stage 'stage' of pipeline 'p1' has path '/abc' which is outside the working directory."), is(true));
     }
 
 }

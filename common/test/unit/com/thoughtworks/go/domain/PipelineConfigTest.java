@@ -16,30 +16,8 @@
 
 package com.thoughtworks.go.domain;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.thoughtworks.go.config.AntTask;
-import com.thoughtworks.go.config.Approval;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.EnvironmentVariableConfig;
-import com.thoughtworks.go.config.EnvironmentVariablesConfig;
-import com.thoughtworks.go.config.ExecTask;
-import com.thoughtworks.go.config.FetchTask;
-import com.thoughtworks.go.config.JobConfig;
-import com.thoughtworks.go.config.JobConfigs;
-import com.thoughtworks.go.config.MingleConfig;
-import com.thoughtworks.go.config.MqlCriteria;
-import com.thoughtworks.go.config.ParamsConfig;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.PipelineTemplateConfig;
-import com.thoughtworks.go.config.StageConfig;
-import com.thoughtworks.go.config.Tasks;
-import com.thoughtworks.go.config.TimerConfig;
-import com.thoughtworks.go.config.TrackingTool;
+import com.rits.cloning.Cloner;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.materials.AbstractMaterialConfig;
 import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.PackageMaterialConfig;
@@ -52,29 +30,32 @@ import com.thoughtworks.go.config.remote.FileConfigOrigin;
 import com.thoughtworks.go.config.remote.RepoConfigOrigin;
 import com.thoughtworks.go.domain.label.PipelineLabel;
 import com.thoughtworks.go.domain.materials.MaterialConfig;
+import com.thoughtworks.go.helper.GoConfigMother;
+import com.thoughtworks.go.helper.MaterialConfigsMother;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import com.thoughtworks.go.helper.StageConfigMother;
 import com.thoughtworks.go.security.GoCipher;
 import com.thoughtworks.go.util.Node;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.junit.Test;
+import org.mockito.Matchers;
+
+import java.util.*;
 
 import static com.thoughtworks.go.util.DataStructureUtils.a;
 import static com.thoughtworks.go.util.DataStructureUtils.m;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class PipelineConfigTest {
     private static final String BUILDING_PLAN_NAME = "building";
@@ -298,7 +279,7 @@ public class PipelineConfigTest {
     public void shouldNotAllowLabelTemplateWithLengthOfZeroInTruncationSyntax() throws Exception {
         String labelFormat = "pipeline-${COUNT}-${git[:0]}-alpha";
         PipelineConfig pipelineConfig = createAndValidatePipelineLabel(labelFormat);
-        assertThat(pipelineConfig.errors().on(PipelineConfig.LABEL_TEMPLATE), is(String.format("Length of zero not allowed on label %s defined on pipeline %s.",labelFormat,pipelineConfig.name())));
+        assertThat(pipelineConfig.errors().on(PipelineConfig.LABEL_TEMPLATE), is(String.format("Length of zero not allowed on label %s defined on pipeline %s.", labelFormat, pipelineConfig.name())));
     }
 
     @Test
@@ -855,7 +836,7 @@ public class PipelineConfigTest {
     {
         PipelineConfig pipelineConfig = PipelineConfigMother.createPipelineConfig("pipeline", "stage", "build");
         MaterialConfig material = pipelineConfig.materialConfigs().first();
-        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material,"plugin"),"1233"));
+        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material, "plugin"), "1233"));
 
         assertThat(pipelineConfig.isConfigOriginSameAsOneOfMaterials(),is(true));
     }
@@ -865,7 +846,7 @@ public class PipelineConfigTest {
     {
         PipelineConfig pipelineConfig = PipelineConfigMother.createPipelineConfig("pipeline", "stage", "build");
         MaterialConfig material = new GitMaterialConfig("http://git");
-        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material,"plugin"),"1233"));
+        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material, "plugin"), "1233"));
 
         assertThat(pipelineConfig.isConfigOriginSameAsOneOfMaterials(),is(false));
     }
@@ -884,7 +865,7 @@ public class PipelineConfigTest {
     {
         PipelineConfig pipelineConfig = PipelineConfigMother.createPipelineConfig("pipeline", "stage", "build");
         MaterialConfig material = pipelineConfig.materialConfigs().first();
-        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material,"plugin"),"1233"));
+        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material, "plugin"), "1233"));
 
         assertThat(pipelineConfig.isConfigOriginFromRevision("1233"),is(true));
     }
@@ -893,9 +874,195 @@ public class PipelineConfigTest {
     {
         PipelineConfig pipelineConfig = PipelineConfigMother.createPipelineConfig("pipeline", "stage", "build");
         MaterialConfig material = pipelineConfig.materialConfigs().first();
-        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material,"plugin"),"1233"));
+        pipelineConfig.setOrigin(new RepoConfigOrigin(new ConfigRepoConfig(material, "plugin"), "1233"));
 
         assertThat(pipelineConfig.isConfigOriginFromRevision("32"),is(false));
+    }
+
+    @Test
+    public void shouldValidateAndUpdatePipelineConfig() {
+        PipelineConfig pipeline = new PipelineConfig();
+        pipeline.setName("validPipeline");
+        pipeline.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.gitMaterialConfig(), MaterialConfigsMother.svnMaterialConfig()));
+        StageConfig stage1 = getStageConfig("stage1", "s1j1");
+        StageConfig stage2 = getStageConfig("stage2", "s2j1");
+        pipeline.getStages().add(stage1);
+        pipeline.getStages().add(stage2);
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipeline)));
+        boolean isValid = pipeline.validateTree(PipelineConfigSaveValidationContext.forChain(pipeline));
+        assertThat(isValid, is(true));
+        assertThat(pipeline.materialConfigs().errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(0).errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(1).errors().isEmpty(), is(true));
+        assertThat(pipeline.errors().getAll().isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldHandleNullStageNamesWhileValidating() {
+        StageConfig s1 = new StageConfig();
+        StageConfig s2 = new StageConfig(new CaseInsensitiveString("s2"), new JobConfigs());
+        PipelineConfig pipeline = new PipelineConfig(new CaseInsensitiveString("p1"), new MaterialConfigs() , s1, s2);
+        pipeline.validate(null);
+        assertThat(s1.errors().on(StageConfig.NAME).contains("Invalid stage name 'null'"), is(true));
+    }
+
+    @Test
+    public void shouldValidateTree() {
+        PipelineConfig pipeline = new PipelineConfig();
+        pipeline.setName("pipeline");
+        pipeline.addEnvironmentVariable("", "");
+        pipeline.addParam(new ParamConfig("",""));
+        pipeline.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.gitMaterialConfig(), MaterialConfigsMother.svnMaterialConfig()));
+        StageConfig stage1 = getStageConfig("stage1", "s1j1");
+        StageConfig stage2 = getStageConfig("stage2", "s2j1");
+        pipeline.getStages().add(stage1);
+        pipeline.getStages().add(stage2);
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipeline)));
+        boolean isValid = pipeline.validateTree(PipelineConfigSaveValidationContext.forChain(pipeline));
+        assertThat(isValid, is(false));
+        assertThat(pipeline.getVariables().get(0).errors().firstError(), is("Environment Variable cannot have an empty name for pipeline 'pipeline'."));
+        assertThat(pipeline.getParams().get(0).errors().firstError(), is("Parameter cannot have an empty name for pipeline 'pipeline'."));
+        assertThat(pipeline.materialConfigs().errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(0).errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(1).errors().isEmpty(), is(true));
+        assertThat(pipeline.errors().getAll().isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldFailValidateWhenUpstreamPipelineForDependencyMaterailDoesNotExist() {
+        String upstreamPipeline = "non-existant";
+        PipelineConfig pipelineConfig = GoConfigMother.createPipelineConfigWithMaterialConfig(
+                new DependencyMaterialConfig(new CaseInsensitiveString(upstreamPipeline), new CaseInsensitiveString("non-existant")));
+
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipelineConfig)));
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(isValid, is(false));
+
+        ConfigErrors materialErrors = pipelineConfig.materialConfigs().first().errors();
+        assertThat(materialErrors.isEmpty(), is(false));
+        assertThat(materialErrors.firstError(), is("Pipeline with name 'non-existant' does not exist"));
+    }
+
+    @Test
+    public void shouldFailValidateWhenUpstreamStageForDependencyMaterailDoesNotExist() {
+        String upstreamPipeline = "upstream";
+        String upstreamStage = "non-existant";
+        PipelineConfig upstream = GoConfigMother.createPipelineConfigWithMaterialConfig(upstreamPipeline,new GitMaterialConfig("url"));
+        PipelineConfig pipelineConfig = GoConfigMother.createPipelineConfigWithMaterialConfig("downstream",
+                new DependencyMaterialConfig(new CaseInsensitiveString(upstreamPipeline), new CaseInsensitiveString(upstreamStage)));
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipelineConfig, upstream)));
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(isValid, is(false));
+        ConfigErrors materialErrors = pipelineConfig.materialConfigs().first().errors();
+        assertThat(materialErrors.isEmpty(), is(false));
+        assertThat(materialErrors.firstError(), is("Stage with name 'non-existant' does not exist on pipeline 'upstream'"));
+    }
+
+    @Test
+    public void shouldReturnTrueIfAllDescendentsAreValid(){
+        StageConfig stageConfig = mock(StageConfig.class);
+        MaterialConfigs materialConfigs = mock(MaterialConfigs.class);
+        when(materialConfigs.iterator()).thenReturn(new MaterialConfigs().iterator());
+        ParamsConfig paramsConfig = mock(ParamsConfig.class);
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        TrackingTool trackingTool = mock(TrackingTool.class);
+        MingleConfig mingleConfig = mock(MingleConfig.class);
+        TimerConfig timerConfig = mock(TimerConfig.class);
+        when(stageConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(materialConfigs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(paramsConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(trackingTool.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(mingleConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(timerConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("p1"), materialConfigs, stageConfig);
+        pipelineConfig.setParams(paramsConfig);
+        pipelineConfig.setVariables(variables);
+        pipelineConfig.setTrackingTool(trackingTool);
+        pipelineConfig.setMingleConfig(mingleConfig);
+        pipelineConfig.setTimer(timerConfig);
+
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertTrue(isValid);
+        verify(stageConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(materialConfigs).iterator();
+        verify(materialConfigs).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(paramsConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(variables).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(trackingTool).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(mingleConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(timerConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
+    @Test
+    public void shouldReturnFalseIfAnyDescendentIsInValid(){
+        StageConfig stageConfig = mock(StageConfig.class);
+        MaterialConfigs materialConfigs = mock(MaterialConfigs.class);
+        when(materialConfigs.iterator()).thenReturn(new MaterialConfigs().iterator());
+        ParamsConfig paramsConfig = mock(ParamsConfig.class);
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        TrackingTool trackingTool = mock(TrackingTool.class);
+        MingleConfig mingleConfig = mock(MingleConfig.class);
+        TimerConfig timerConfig = mock(TimerConfig.class);
+        when(stageConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(materialConfigs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(paramsConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(trackingTool.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(mingleConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(timerConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("p1"), materialConfigs, stageConfig);
+        pipelineConfig.setParams(paramsConfig);
+        pipelineConfig.setVariables(variables);
+        pipelineConfig.setTrackingTool(trackingTool);
+        pipelineConfig.setMingleConfig(mingleConfig);
+        pipelineConfig.setTimer(timerConfig);
+
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertFalse(isValid);
+        verify(stageConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(materialConfigs).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(paramsConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(variables).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(trackingTool).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(mingleConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(timerConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
+    @Test
+    public void shouldValidateAPipelineHasAtleastOneStage(){
+        PipelineConfig pipelineConfig = new PipelineConfig();
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().on("stages"), is("A pipeline must have at least one stage"));
+    }
+
+    @Test
+    public void shouldDetectCyclicDependencies(){
+        String pipelineName = "p1";
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines(pipelineName, "p2", "p3");
+        PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
+        p2.addMaterialConfig(new DependencyMaterialConfig(new CaseInsensitiveString(pipelineName), new CaseInsensitiveString("stage")));
+        PipelineConfig p3 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p3"));
+        p3.addMaterialConfig(new DependencyMaterialConfig(new CaseInsensitiveString("p2"), new CaseInsensitiveString("stage")));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        PipelineConfig p1 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString(pipelineName));
+        p1 = new Cloner().deepClone(p1); // Do not remove cloning else it changes the underlying cache object defeating the purpose of the test.
+        p1.addMaterialConfig(new DependencyMaterialConfig(new CaseInsensitiveString("p3"), new CaseInsensitiveString("stage")));
+        p1.validateCyclicDependencies(PipelineConfigSaveValidationContext.forChain(p1));
+        assertThat(p1.materialConfigs().errors().isEmpty(), is(false));
+        assertThat(p1.materialConfigs().errors().on("base"), is("Circular dependency: p1 <- p2 <- p3 <- p1"));
+    }
+
+    private StageConfig getStageConfig(String stageName, String jobName) {
+        JobConfig jobConfig = new JobConfig(new CaseInsensitiveString(jobName));
+        jobConfig.addTask(new AntTask());
+        jobConfig.addTask(new ExecTask("command", "", "workingDir"));
+        jobConfig.artifactPlans().add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
+        jobConfig.addVariable("env1", "val1");
+        jobConfig.addResource("powerful");
+        JobConfigs jobConfigs = new JobConfigs(jobConfig);
+        return new StageConfig(new CaseInsensitiveString(stageName), jobConfigs);
     }
 
     private StageConfig completedStage() {

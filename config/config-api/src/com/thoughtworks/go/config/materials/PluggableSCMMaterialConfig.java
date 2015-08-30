@@ -165,6 +165,11 @@ public class PluggableSCMMaterialConfig extends AbstractMaterialConfig {
     }
 
     @Override
+    public void setAutoUpdate(boolean autoUpdate) {
+        scmConfig.setAutoUpdate(autoUpdate);
+    }
+
+    @Override
     public Boolean isUsedInFetchArtifact(PipelineConfig pipelineConfig) {
         return Boolean.FALSE;
     }

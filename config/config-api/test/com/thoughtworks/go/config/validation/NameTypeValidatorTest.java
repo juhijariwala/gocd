@@ -26,7 +26,6 @@ public class NameTypeValidatorTest {
     @Test
     public void shouldValidateNameBasedOnLength() {
         assertThat(new NameTypeValidator().isNameValid("name"), is(true));
-        assertThat(new NameTypeValidator().isNameValid("name"), is(true));
         assertThat(new NameTypeValidator().isNameValid(nameOfLength(255)), is(true));
         assertThat(new NameTypeValidator().isNameValid(nameOfLength(256)), is(false));
     }

@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.materials.AbstractMaterialConfig;
 import com.thoughtworks.go.config.materials.Filter;
 import com.thoughtworks.go.config.materials.IgnoredFiles;
@@ -54,7 +54,7 @@ public class HgMaterialConfigTest {
     @Test
     public void validate_shouldEnsureUrlIsNotBlank() {
         HgMaterialConfig hgMaterialConfig = new HgMaterialConfig("", null);
-        hgMaterialConfig.validate(new ValidationContext(null));
+        hgMaterialConfig.validate(new ConfigSaveValidationContext(null));
         assertThat(hgMaterialConfig.errors().on(HgMaterialConfig.URL), is("URL cannot be blank"));
     }
 

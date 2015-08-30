@@ -23,18 +23,25 @@ import java.util.List;
 import java.util.Map;
 
 import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import com.thoughtworks.go.helper.StageConfigMother;
 import org.apache.commons.collections.map.SingletonMap;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Matchers;
 
 import static com.thoughtworks.go.util.DataStructureUtils.a;
 import static com.thoughtworks.go.util.DataStructureUtils.m;
+import static com.thoughtworks.go.util.TestUtils.contains;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class StageConfigTest {
 
@@ -239,5 +246,80 @@ public class StageConfigTest {
 
         assertThat(stage.getOperateUsers(), is(Arrays.asList(new AdminUser(new CaseInsensitiveString("user1")), new AdminUser(new CaseInsensitiveString("user2")))));
         assertThat(stage.getOperateRoles(), is(Arrays.asList(new AdminRole(new CaseInsensitiveString("role1")), new AdminRole(new CaseInsensitiveString("role2")))));
+    }
+
+    @Test
+    public void shouldFailValidationWhenNameIsBlank(){
+        StageConfig stageConfig = new StageConfig();
+        stageConfig.validate(null);
+        assertThat(stageConfig.errors().on(StageConfig.NAME), contains("Invalid stage name 'null'"));
+        stageConfig.setName(null);
+        stageConfig.validate(null);
+        assertThat(stageConfig.errors().on(StageConfig.NAME), contains("Invalid stage name 'null'"));
+        stageConfig.setName("");
+        stageConfig.validate(null);
+        assertThat(stageConfig.errors().on(StageConfig.NAME), contains("Invalid stage name 'null'"));
+    }
+
+    @Test
+    public void shouldValidateTree(){
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        JobConfigs jobConfigs = mock(JobConfigs.class);
+        Approval approval = mock(Approval.class);
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("stage$"), jobConfigs, approval);
+        stageConfig.setVariables(variables);
+
+        stageConfig.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig(), stageConfig));
+
+        assertThat(stageConfig.errors().on(StageConfig.NAME), contains("Invalid stage name 'stage$'"));
+        ArgumentCaptor<PipelineConfigSaveValidationContext> captor = ArgumentCaptor.forClass(PipelineConfigSaveValidationContext.class);
+        verify(jobConfigs).validateTree(captor.capture());
+        PipelineConfigSaveValidationContext childContext = captor.getValue();
+        assertThat((StageConfig) childContext.getParent(), is(stageConfig));
+        verify(approval).validateTree(childContext);
+        verify(variables).validateTree(childContext);
+    }
+
+    @Test
+    public void shouldReturnTrueIfAllDescendentsAreValid(){
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        JobConfigs jobConfigs = mock(JobConfigs.class);
+        Approval approval = mock(Approval.class);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(jobConfigs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(approval.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("p1"), jobConfigs);
+        stageConfig.setVariables(variables);
+        stageConfig.setApproval(approval);
+
+        boolean isValid = stageConfig.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig(), stageConfig));
+        assertTrue(isValid);
+
+        verify(jobConfigs).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(variables).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(approval).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
+    @Test
+    public void shouldReturnFalseIfAnyDescendentIsInValid(){
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        JobConfigs jobConfigs = mock(JobConfigs.class);
+        Approval approval = mock(Approval.class);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(jobConfigs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(approval.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("p1"), jobConfigs);
+        stageConfig.setVariables(variables);
+        stageConfig.setApproval(approval);
+
+        boolean isValid = stageConfig.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig(), stageConfig));
+        assertFalse(isValid);
+
+        verify(jobConfigs).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(variables).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(approval).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+
     }
 }

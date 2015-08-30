@@ -16,14 +16,46 @@
 
 package com.thoughtworks.go.helper;
 
-import com.thoughtworks.go.config.ArtifactPlans;
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.JobConfig;
-import com.thoughtworks.go.config.Resource;
-import com.thoughtworks.go.config.Resources;
+import com.thoughtworks.go.config.*;
+import com.thoughtworks.go.domain.ArtifactType;
+
+import java.util.Arrays;
 
 public class JobConfigMother {
+    public static JobConfig job() {
+        JobConfig jobConfig = createJobConfigWithJobNameAndEmptyResources();
+        addTask(jobConfig);
+        return jobConfig;
+    }
+
+    private static void addTask(JobConfig jobConfig) {
+        jobConfig.setVariables(EnvironmentVariablesConfigMother.environmentVariables());
+        AntTask task = new AntTask();
+        task.setBuildFile("build-file");
+        task.setTarget("target");
+        task.setWorkingDirectory("working-directory");
+        jobConfig.addTask(task);
+    }
+
     public static JobConfig createJobConfigWithJobNameAndEmptyResources() {
-        return new JobConfig(new CaseInsensitiveString("defaultJob"),new Resources(new Resource("Linux"),new Resource()),new ArtifactPlans());
+        return new JobConfig(new CaseInsensitiveString("defaultJob"), new Resources(new Resource("Linux"), new Resource()), new ArtifactPlans());
+    }
+
+    public static JobConfig jobConfig() {
+        JobConfig job = createJobConfigWithResourceAndArtifactPlans();
+        addTask(job);
+        job.setTimeout("100");
+        job.setRunInstanceCount(3);
+        job.artifactPlans().clear();
+        job.artifactPlans().add(new ArtifactPlan(ArtifactType.file, "target/dist.jar", "pkg"));
+        job.artifactPlans().add(new TestArtifactPlan(new ArtifactPlan(ArtifactType.file, "target/reports/**/*Test.xml", "reports")));
+        job.addTab("coverage", "Jcoverage/index.html");
+        job.addTab("something", "something/path.html");
+        job.getProperties().add(new ArtifactPropertiesGenerator("coverage.class", "target/emma/coverage.xml", "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')"));
+        return job;
+    }
+
+    public static JobConfig createJobConfigWithResourceAndArtifactPlans() {
+        return new JobConfig(new CaseInsensitiveString("defaultJob"), new Resources(new Resource("Linux"), new Resource("Java")), new ArtifactPlans(Arrays.asList(new ArtifactPlan(ArtifactType.file, "src", "dest"))));
     }
 }

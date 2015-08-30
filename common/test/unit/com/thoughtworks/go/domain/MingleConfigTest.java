@@ -19,9 +19,9 @@ package com.thoughtworks.go.domain;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.config.MingleConfig;
 import com.thoughtworks.go.config.MqlCriteria;
-import com.thoughtworks.go.config.ValidationContext;
 import org.apache.commons.collections.map.SingletonMap;
 import org.apache.commons.httpclient.URIException;
 import org.junit.Before;
@@ -87,7 +87,7 @@ public class MingleConfigTest {
     @Test
     public void shouldReturnInvalidIfTheURLIsNotAHTTPSURL() {
         MingleConfig mingleConfig = new MingleConfig("http://some-mingle-instance", "go");
-        mingleConfig.validate(new ValidationContext(null));
+        mingleConfig.validate(new ConfigSaveValidationContext(null));
         assertThat(mingleConfig.errors().isEmpty(), is(false));
         assertThat(mingleConfig.errors().on(MingleConfig.PROJECT_IDENTIFIER), is(nullValue()));
         assertThat(mingleConfig.errors().on(MingleConfig.BASE_URL), is("Should be a URL starting with https://"));
@@ -96,7 +96,7 @@ public class MingleConfigTest {
     @Test
     public void shouldReturnInvalidIfTheProjectIdentifierIsInvalid() {
         MingleConfig mingleConfig = new MingleConfig("https://some-mingle-instance", "wrong project identifier");
-        mingleConfig.validate(new ValidationContext(null));
+        mingleConfig.validate(new ConfigSaveValidationContext(null));
         assertThat(mingleConfig.errors().isEmpty(), is(false));
         assertThat(mingleConfig.errors().on(MingleConfig.BASE_URL), is(nullValue()));
         assertThat(mingleConfig.errors().on(MingleConfig.PROJECT_IDENTIFIER), is("Should be a valid mingle identifier."));

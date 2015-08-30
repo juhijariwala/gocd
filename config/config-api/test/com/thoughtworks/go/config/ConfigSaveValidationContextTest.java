@@ -19,14 +19,16 @@ package com.thoughtworks.go.config;
 import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.mercurial.HgMaterialConfig;
 import com.thoughtworks.go.domain.PipelineGroups;
+import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 
-public class ValidationContextTest {
+public class ConfigSaveValidationContextTest {
 
     @Before
     public void setUp() throws Exception {
@@ -34,13 +36,13 @@ public class ValidationContextTest {
 
     @Test
     public void testShouldReturnTrueIfTemplatesIsAnAncestor() {
-        ValidationContext context = ValidationContext.forChain(new BasicCruiseConfig(), new TemplatesConfig(), new PipelineTemplateConfig());
+        ValidationContext context = ConfigSaveValidationContext.forChain(new BasicCruiseConfig(), new TemplatesConfig(), new PipelineTemplateConfig());
         assertThat(context.isWithinTemplates(), is(true));
     }
 
     @Test
     public void testShouldReturnFalseIfTemplatesIsNotAnAncestor() {
-        ValidationContext context = ValidationContext.forChain(new BasicCruiseConfig(), new PipelineGroups(), new BasicPipelineConfigs(), new PipelineConfig());
+        ValidationContext context = ConfigSaveValidationContext.forChain(new BasicCruiseConfig(), new PipelineGroups(), new BasicPipelineConfigs(), new PipelineConfig());
         assertThat(context.isWithinTemplates(), is(false));
     }
     
@@ -52,7 +54,7 @@ public class ValidationContextTest {
             PipelineConfig pipelineConfig = PipelineConfigMother.pipelineConfig("pipeline" + i, new MaterialConfigs(hg));
             cruiseConfig.addPipeline("defaultGroup", pipelineConfig);
         }
-        ValidationContext context = ValidationContext.forChain(cruiseConfig);
+        ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
 
         assertThat(context.getAllMaterialsByFingerPrint(hg.getFingerprint()).size(), is(10));
     }
@@ -60,7 +62,34 @@ public class ValidationContextTest {
     @Test
     public void shouldReturnEmptyListWhenNoMaterialsMatch() {
         CruiseConfig cruiseConfig = new BasicCruiseConfig();
-        ValidationContext context = ValidationContext.forChain(cruiseConfig);
+        ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
         assertThat(context.getAllMaterialsByFingerPrint("something").isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldGetPipelineConfigByName(){
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1");
+        ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
+        assertThat(context.getPipelineConfigByName(new CaseInsensitiveString("p1")), is(cruiseConfig.allPipelines().get(0)));
+        assertThat(context.getPipelineConfigByName(new CaseInsensitiveString("does_not_exist")), is(nullValue()));
+    }
+
+    @Test
+    public void shouldGetServerSecurityConfig(){
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1");
+        GoConfigMother.enableSecurityWithPasswordFile(cruiseConfig);
+        ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
+        assertThat(context.getServerSecurityConfig(), is(cruiseConfig.server().security()));
+    }
+
+    @Test
+    public void shouldReturnIfTheContextBelongsToPipeline(){
+        ValidationContext context = ConfigSaveValidationContext.forChain(new PipelineConfig());
+        assertThat(context.isWithinPipeline(), is(true));
+    }
+    @Test
+    public void shouldReturnIfTheContextBelongsToTemplate(){
+        ValidationContext context = ConfigSaveValidationContext.forChain(new PipelineTemplateConfig());
+        assertThat(context.isWithinPipeline(), is(false));
     }
 }

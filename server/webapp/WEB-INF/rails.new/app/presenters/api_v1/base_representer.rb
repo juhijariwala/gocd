@@ -21,6 +21,7 @@ require 'roar/json/hal'
 module ApiV1
   class BaseRepresenter < Roar::Decorator
     include Roar::JSON::HAL
+    include JavaImports
 
     class <<self
       def property(name, options={})
@@ -36,5 +37,8 @@ module ApiV1
       super.deep_symbolize_keys
     end
 
+    def from_hash(hash, options={})
+      super(hash.deep_stringify_keys, options) if hash
+    end
   end
 end

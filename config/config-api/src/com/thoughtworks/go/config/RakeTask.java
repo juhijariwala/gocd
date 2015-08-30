@@ -21,7 +21,7 @@ import com.thoughtworks.go.util.FileUtil;
 @ConfigTag("rake")
 public class RakeTask extends BuildTask {
     private final String RAKE = "Rake";
-
+    public static final String TYPE="rake";
     @Override
     public String getTaskType() {
         return "rake";

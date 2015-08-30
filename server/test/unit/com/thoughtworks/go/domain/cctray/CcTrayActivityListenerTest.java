@@ -17,6 +17,8 @@
 package com.thoughtworks.go.domain.cctray;
 
 import com.thoughtworks.go.config.CruiseConfig;
+import com.thoughtworks.go.config.PipelineConfig;
+import com.thoughtworks.go.config.PipelineConfigs;
 import com.thoughtworks.go.domain.JobInstance;
 import com.thoughtworks.go.domain.Stage;
 import com.thoughtworks.go.helper.GoConfigMother;
@@ -33,9 +35,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 public class CcTrayActivityListenerTest {
     private StubCcTrayJobStatusChangeHandler jobStatusChangeHandler;
@@ -122,6 +122,19 @@ public class CcTrayActivityListenerTest {
 
         assertThat(logFixture.contains(Level.WARN, "Failed to handle action in CCTray queue"), is(true));
         verify(normalStageStatusChangeHandler).call(StageMother.unrunStage("some-stage"));
+    }
+
+    @Test
+    public void shouldInvokeConfigChangeHandlerWhenPipelineConfigChanges() throws InterruptedException {
+        CcTrayConfigChangeHandler ccTrayConfigChangeHandler = mock(CcTrayConfigChangeHandler.class);
+        CcTrayActivityListener listener = new CcTrayActivityListener(goConfigService, mock(CcTrayJobStatusChangeHandler.class),  mock(CcTrayStageStatusChangeHandler.class), ccTrayConfigChangeHandler);
+        listener.initialize();
+        PipelineConfig pipelineConfig=mock(PipelineConfig.class);
+
+        listener.onPipelineConfigChange(pipelineConfig, "group1");
+        waitForProcessingToHappen();
+
+        verify(ccTrayConfigChangeHandler).call(pipelineConfig, "group1");
     }
 
     private void waitForProcessingToHappen() throws InterruptedException {

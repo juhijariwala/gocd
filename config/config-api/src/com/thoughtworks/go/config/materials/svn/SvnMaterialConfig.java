@@ -62,8 +62,12 @@ public class SvnMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
     private final GoCipher goCipher;
     public static final String TYPE = "SvnMaterial";
 
+    public SvnMaterialConfig() {
+        this(new GoCipher());
+    }
+
     private SvnMaterialConfig(GoCipher goCipher) {
-        super("SvnMaterial");
+        super(TYPE);
         this.goCipher = goCipher;
     }
 
@@ -154,6 +158,10 @@ public class SvnMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
         return encryptedPassword;
     }
 
+    public void setEncryptedPassword(String encryptedPassword) {
+        this.encryptedPassword=encryptedPassword;
+    }
+
     @PostConstruct
     @Override
     public void ensureEncrypted() {
@@ -163,6 +171,11 @@ public class SvnMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
     @Override
     public String getUrl() {
         return url == null ? null : url.forCommandline();
+    }
+
+    @Override
+    public void setUrl(String url) {
+        this.url = new UrlArgument(url);
     }
 
     @Override
@@ -271,7 +284,15 @@ public class SvnMaterialConfig extends ScmMaterialConfig implements ParamsAttrib
             String passwordToSet = (String) map.get(PASSWORD);
             resetPassword(passwordToSet);
         }
-        this.checkExternals  = "true".equals(map.get(CHECK_EXTERNALS));
+        this.checkExternals = "true".equals(map.get(CHECK_EXTERNALS));
+    }
+
+    public void setCheckExternals(boolean checkExternals){
+        this.checkExternals = checkExternals;
+    }
+
+    public void setUserName(String userName){
+        this.userName = userName;
     }
 
     @Override

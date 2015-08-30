@@ -258,6 +258,40 @@ public class BuildAssignmentServiceTest {
     }
 
     @Test
+    public void shouldCancelBuildsForDeletedStagesWhenPipelineConfigChanges() throws Exception {
+        fixture.createPipelineWithFirstStageScheduled();
+        buildAssignmentService.onTimer();
+        configHelper.removeStage(fixture.pipelineName, fixture.devStage);
+
+        buildAssignmentService.onPipelineConfigChange(goConfigService.getCurrentConfig().getPipelineConfigByName(new CaseInsensitiveString(fixture.pipelineName)), "g1");
+
+        Pipeline pipeline = pipelineDao.mostRecentPipeline(fixture.pipelineName);
+        JobInstance job = pipeline.getFirstStage().getJobInstances().first();
+        assertThat(job.getState(), is(JobState.Completed));
+        assertThat(job.getResult(), is(JobResult.Cancelled));
+    }
+
+    @Test
+    public void shouldCancelBuildsForDeletedJobsWhenPipelineConfigChanges() throws Exception {
+        fixture = new PipelineWithTwoStages(materialRepository, transactionTemplate).usingTwoJobs();
+        fixture.usingConfigHelper(configHelper).usingDbHelper(dbHelper).onSetUp();
+        fixture.createPipelineWithFirstStageScheduled();
+
+        buildAssignmentService.onTimer();
+        configHelper.removeJob(fixture.pipelineName, fixture.devStage, fixture.JOB_FOR_DEV_STAGE);
+
+        buildAssignmentService.onPipelineConfigChange(goConfigService.getCurrentConfig().getPipelineConfigByName(new CaseInsensitiveString(fixture.pipelineName)), "g1");
+
+        Pipeline pipeline = pipelineDao.mostRecentPipeline(fixture.pipelineName);
+        JobInstance deletedJob = pipeline.getFirstStage().getJobInstances().getByName(fixture.JOB_FOR_DEV_STAGE);
+        assertThat(deletedJob.getState(), is(JobState.Completed));
+        assertThat(deletedJob.getResult(), is(JobResult.Cancelled));
+        JobInstance retainedJob = pipeline.getFirstStage().getJobInstances().getByName(fixture.DEV_STAGE_SECOND_JOB);
+        assertThat(retainedJob.getState(), is(JobState.Scheduled));
+        assertThat(retainedJob.getResult(), is(JobResult.Unknown));
+    }
+
+    @Test
     public void shouldCancelBuildBelongingToNonExistentPipeline() throws Exception {
         fixture.createPipelineWithFirstStageScheduled();
         buildAssignmentService.onTimer();

@@ -130,4 +130,7 @@ describe Admin::TasksController do
       end
     end
   end
+
+  def controller_specific_setup task_view_service
+  end
 end

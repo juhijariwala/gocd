@@ -22,11 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.ConfigAttribute;
-import com.thoughtworks.go.config.ParamsAttributeAware;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.preprocessor.SkipParameterResolution;
 import com.thoughtworks.go.config.validation.NameTypeValidator;
 import com.thoughtworks.go.domain.ConfigErrors;
@@ -159,6 +155,10 @@ public abstract class AbstractMaterialConfig implements MaterialConfig, ParamsAt
             errors().add(MATERIAL_NAME, NameTypeValidator.errorMessage("material", name));
         }
         validateConcreteMaterial(validationContext);
+    }
+
+    public void validateTree(PipelineConfigSaveValidationContext validationContext) {
+        validate(validationContext);
     }
 
     protected abstract void validateConcreteMaterial(ValidationContext validationContext);

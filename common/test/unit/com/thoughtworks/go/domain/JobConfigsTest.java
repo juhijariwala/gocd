@@ -20,12 +20,18 @@ import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.helper.PipelineConfigMother;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 
 import static com.thoughtworks.go.util.DataStructureUtils.a;
 import static com.thoughtworks.go.util.DataStructureUtils.m;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JobConfigsTest {
 
@@ -60,11 +66,57 @@ public class JobConfigsTest {
 
         assertThat(firstFoo.errors().isEmpty(), is(true));
         assertThat(secondFoo.errors().isEmpty(), is(true));
-        jobs.validate(ValidationContext.forChain(config, config.getGroups(), config.getGroups().get(0), pipelineConfig, pipelineConfig.get(0), jobs));
+        jobs.validate(ConfigSaveValidationContext.forChain(config, config.getGroups(), config.getGroups().get(0), pipelineConfig, pipelineConfig.get(0), jobs));
         assertThat(firstFoo.errors().on(JobConfig.NAME), is("You have defined multiple jobs called 'foo'. Job names are case-insensitive and must be unique."));
         assertThat(secondFoo.errors().on(JobConfig.NAME), is("You have defined multiple jobs called 'foo'. Job names are case-insensitive and must be unique."));
 
     }
+
+    @Test
+    public void shouldValidateTree() throws Exception{
+        PipelineConfig pipelineConfig = PipelineConfigMother.pipelineConfig("pipeline");
+        JobConfigs jobs = pipelineConfig.get(0).getJobs();
+        jobs.add(new JobConfig("quux"));
+        jobs.setConfigAttributes(a(m(JobConfig.NAME, "foo"), m(JobConfig.NAME, "foo")));
+        assertThat(jobs.size(), is(2));
+
+        JobConfig firstFoo = jobs.get(0);
+        JobConfig secondFoo = jobs.get(1);
+        assertThat(firstFoo.name(), is(new CaseInsensitiveString("foo")));
+        assertThat(secondFoo.name(), is(new CaseInsensitiveString("foo")));
+
+        assertThat(firstFoo.errors().isEmpty(), is(true));
+        assertThat(secondFoo.errors().isEmpty(), is(true));
+        jobs.validate(PipelineConfigSaveValidationContext.forChain(pipelineConfig, pipelineConfig.get(0), jobs));
+        assertThat(firstFoo.errors().on(JobConfig.NAME), is("You have defined multiple jobs called 'foo'. Job names are case-insensitive and must be unique."));
+        assertThat(secondFoo.errors().on(JobConfig.NAME), is("You have defined multiple jobs called 'foo'. Job names are case-insensitive and must be unique."));
+
+    }
+
+    @Test
+    public void shouldReturnTrueIfAllDescendentsAreValid(){
+        JobConfig jobConfig = mock(JobConfig.class);
+        when(jobConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        JobConfigs jobConfigs = new JobConfigs(jobConfig);
+
+        boolean isValid = jobConfigs.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig()));
+        assertTrue(isValid);
+
+        verify(jobConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
+    @Test
+    public void shouldReturnFalseIfAnyDescendentIsInvalid(){
+        JobConfig jobConfig = mock(JobConfig.class);
+        when(jobConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        JobConfigs jobConfigs = new JobConfigs(jobConfig);
+
+        boolean isValid = jobConfigs.validateTree(PipelineConfigSaveValidationContext.forChain(new PipelineConfig()));
+        assertFalse(isValid);
+
+        verify(jobConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
 
 
     @Test

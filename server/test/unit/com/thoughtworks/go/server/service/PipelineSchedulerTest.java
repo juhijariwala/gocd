@@ -111,7 +111,7 @@ public class PipelineSchedulerTest {
         final HashMap<String, String> revisions = new HashMap<String, String>();
         final HashMap<String, String> environmentVariables = new HashMap<String, String>();
         scheduler.manualProduceBuildCauseAndSave("invalid", Username.ANONYMOUS, new ScheduleOptions(revisions, environmentVariables, new HashMap<String, String>()), operationResult);
-        verify(operationResult).notFound("Pipeline 'invalid' not found","Pipeline 'invalid' not found", HealthStateType.general(
+        verify(operationResult).notFound("Pipeline 'invalid' not found", "Pipeline 'invalid' not found", HealthStateType.general(
                 HealthStateScope.forPipeline("invalid")));
     }
 
@@ -149,8 +149,8 @@ public class PipelineSchedulerTest {
         HttpOperationResult result = new HttpOperationResult();
         final HashMap<String, String> environmentVariables = new HashMap<String, String>();
         scheduler.manualProduceBuildCauseAndSave("pipeline", Username.ANONYMOUS, new ScheduleOptions(Collections.singletonMap("invalid-material", "blah-revision"), environmentVariables, new HashMap<String, String>()), result);
-        assertThat(result.httpCode(),is(404));
-        assertThat(result.message(),is("material with fingerprint [invalid-material] not found in pipeline [pipeline]"));
+        assertThat(result.httpCode(), is(404));
+        assertThat(result.message(), is("material with fingerprint [invalid-material] not found in pipeline [pipeline]"));
     }
 
     @Test public void shouldNotAcceptEmptyRevision() throws Exception {
@@ -163,5 +163,15 @@ public class PipelineSchedulerTest {
         scheduler.manualProduceBuildCauseAndSave("pipeline", Username.ANONYMOUS, new ScheduleOptions(Collections.singletonMap("invalid-material", ""), environmentVariables, new HashMap<String, String>()), result);
         assertThat(result.httpCode(),is(406));
         assertThat(result.message(),is("material with fingerprint [invalid-material] has empty revision"));
+    }
+
+    @Test
+    public void shouldAddPipelineConfigToPipelinesOnPipelineConfigChanged(){
+        PipelineConfig newPipeline = mock(PipelineConfig.class);
+        String pipelineName = "newly-added-pipeline";
+        when(newPipeline.name()).thenReturn(new CaseInsensitiveString(pipelineName));
+        scheduler.onPipelineConfigChange(newPipeline, "g1");
+        scheduler.checkPipelines();
+        verify(queue,times(1)).post(ScheduleCheckMessageMatcher.matchScheduleCheckMessage(pipelineName));
     }
 }

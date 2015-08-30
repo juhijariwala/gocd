@@ -20,7 +20,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import javax.annotation.PostConstruct;
 
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.ConfigSaveValidationContext;
 import com.thoughtworks.go.security.GoCipher;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageConfiguration;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageConfigurations;
@@ -121,7 +121,7 @@ public class ConfigurationPropertyTest {
     @Test
     public void shouldFailValidationIfAPropertyDoesNotHaveValue() {
         ConfigurationProperty property = new ConfigurationProperty(new ConfigurationKey("secureKey"), null, new EncryptedConfigurationValue("invalid-encrypted-value"), new GoCipher());
-        property.validate(ValidationContext.forChain(property));
+        property.validate(ConfigSaveValidationContext.forChain(property));
         assertThat(property.errors().isEmpty(), is(false));
         assertThat(property.errors().getAllOn(ConfigurationProperty.ENCRYPTED_VALUE).contains(
                 "Encrypted value for property with key 'secureKey' is invalid. This usually happens when the cipher text is modified to have an invalid value."), is(true));
@@ -131,7 +131,7 @@ public class ConfigurationPropertyTest {
     public void shouldPassValidationIfBothNameAndValueAreProvided() throws InvalidCipherTextException {
         GoCipher cipher = mock(GoCipher.class);
         ConfigurationProperty property = new ConfigurationProperty(new ConfigurationKey("name"), new ConfigurationValue("value"), null, cipher);
-        property.validate(ValidationContext.forChain(property));
+        property.validate(ConfigSaveValidationContext.forChain(property));
         assertThat(property.errors().isEmpty(), is(true));
     }
 
@@ -141,7 +141,7 @@ public class ConfigurationPropertyTest {
         String decrypted = "decrypted";
         when(cipher.decrypt(encrypted)).thenReturn(decrypted);
         ConfigurationProperty property = new ConfigurationProperty(new ConfigurationKey("name"), null, new EncryptedConfigurationValue(encrypted), cipher);
-        property.validate(ValidationContext.forChain(property));
+        property.validate(ConfigSaveValidationContext.forChain(property));
         assertThat(property.errors().isEmpty(), is(true));
     }
 

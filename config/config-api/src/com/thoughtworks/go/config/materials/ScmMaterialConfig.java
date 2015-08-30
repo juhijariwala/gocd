@@ -102,6 +102,8 @@ public abstract class ScmMaterialConfig extends AbstractMaterialConfig implement
 
     public abstract String getUrl();
 
+    public abstract void setUrl(String url);
+
     protected abstract UrlArgument getUrlArgument();
 
     protected abstract String getLocation();
@@ -171,7 +173,7 @@ public abstract class ScmMaterialConfig extends AbstractMaterialConfig implement
             return false;
         }
 
-        return true;
+        return super.equals(that);
     }
 
     @Override

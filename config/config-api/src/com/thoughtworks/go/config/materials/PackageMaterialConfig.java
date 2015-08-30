@@ -60,6 +60,10 @@ public class PackageMaterialConfig extends AbstractMaterialConfig {
         return packageId;
     }
 
+    public void setPackageId(String packageId) {
+        this.packageId = packageId;
+    }
+
     public String getPluginId() {
         return getPackageDefinition().getRepository().getPluginConfiguration().getId();
     }
@@ -157,6 +161,11 @@ public class PackageMaterialConfig extends AbstractMaterialConfig {
     @Override
     public boolean isAutoUpdate() {
         return packageDefinition.isAutoUpdate();
+    }
+
+    @Override
+    public void setAutoUpdate(boolean autoUpdate) {
+        packageDefinition.setAutoUpdate(autoUpdate);
     }
 
     @Override

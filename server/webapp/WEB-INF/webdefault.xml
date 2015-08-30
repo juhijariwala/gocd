@@ -21,7 +21,7 @@
         version="3.0">
 
     <context-param>
-        <param-name>org.eclipse.jetty.servlet.MaxAge</param-name>
+        <param-name>org.eclipse.jetty.servlet.eMaxAge</param-name>
         <param-value>36000</param-value>
     </context-param>
 
@@ -31,6 +31,10 @@
         <init-param>
             <param-name>mimeTypes</param-name>
             <param-value>text/html,text/plain,text/xml,application/xhtml+xml,text/css,application/javascript,image/svg+xml,application/vnd.go.cd.v1+json,application/json</param-value>
+        </init-param>
+        <init-param>
+            <param-name>methods</param-name>
+            <param-value>HEAD,GET,POST,PUT,PATCH,DELETE</param-value>
         </init-param>
     </filter>
 

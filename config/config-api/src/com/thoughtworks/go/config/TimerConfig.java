@@ -19,6 +19,7 @@ package com.thoughtworks.go.config;
 import java.util.Map;
 
 import com.thoughtworks.go.domain.ConfigErrors;
+import com.thoughtworks.go.util.command.StringArgument;
 import org.quartz.CronExpression;
 
 
@@ -45,6 +46,9 @@ public class TimerConfig implements Validatable {
     public String getTimerSpec() {
         return timerSpec;
     }
+    public void setTimerSpec(String timerSpec){
+        this.timerSpec=timerSpec;
+    }
 
     public boolean shouldTriggerOnlyOnChanges() {
         return onlyOnChanges;
@@ -53,6 +57,9 @@ public class TimerConfig implements Validatable {
     //Only for Rails
     public boolean getOnlyOnChanges(){
         return onlyOnChanges;
+    }
+    public void setOnlyOnChanges(boolean onlyOnChanges){
+        this.onlyOnChanges = onlyOnChanges;
     }
 
     public static TimerConfig createTimer(Object attributes) {
@@ -63,6 +70,11 @@ public class TimerConfig implements Validatable {
         }
         String onlyOnChanges = (String) timerConfigMap.get(TIMER_ONLY_ON_CHANGES);
         return new TimerConfig(timerSpec, "1".equals(onlyOnChanges));
+    }
+
+    public boolean validateTree(ValidationContext validationContext) {
+        validate(validationContext);
+        return errors().isEmpty();
     }
 
     public void validate(ValidationContext validationContext) {

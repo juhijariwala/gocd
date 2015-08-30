@@ -53,10 +53,7 @@ import com.thoughtworks.go.domain.packagerepository.PackageRepository;
 import com.thoughtworks.go.domain.scm.SCM;
 import com.thoughtworks.go.domain.scm.SCMs;
 import com.thoughtworks.go.security.GoCipher;
-import com.thoughtworks.go.util.GoConstants;
-import com.thoughtworks.go.util.DFSCycleDetector;
-import com.thoughtworks.go.util.Node;
-import com.thoughtworks.go.util.Pair;
+import com.thoughtworks.go.util.*;
 
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static com.thoughtworks.go.util.ExceptionUtils.bombIfNull;
@@ -446,13 +443,32 @@ public class BasicCruiseConfig implements CruiseConfig {
         return hashtable;
     }
 
+    private class DependencyTable implements PipelineDependencyState {
+        private Hashtable<CaseInsensitiveString, Node> targetTable;
+
+        public DependencyTable(Hashtable<CaseInsensitiveString, Node> targetTable) {
+            this.targetTable = targetTable;
+        }
+
+        @Override
+        public boolean hasPipeline(CaseInsensitiveString key) {
+            return targetTable.containsKey(key);
+        }
+
+        @Override
+        public Node getDependencyMaterials(CaseInsensitiveString pipeline) {
+            return targetTable.get(pipeline);
+        }
+    }
+
     private void areThereCyclicDependencies() {
         final DFSCycleDetector dfsCycleDetector = new DFSCycleDetector();
         final Hashtable<CaseInsensitiveString, Node> dependencyTable = getDependencyTable();
         List<PipelineConfig> pipelineConfigs = this.getAllPipelineConfigs();
+        DependencyTable pipelineDependencyState = new DependencyTable(dependencyTable);
         for (PipelineConfig pipelineConfig : pipelineConfigs) {
             try {
-                dfsCycleDetector.topoSort(pipelineConfig.name(), dependencyTable);
+                dfsCycleDetector.topoSort(pipelineConfig.name(), pipelineDependencyState);
             } catch (Exception e) {
                 addToErrorsBaseOnMaterialsIfDoesNotExist(e.getMessage(), pipelineConfig.materialConfigs(), pipelineConfigs);
             }
