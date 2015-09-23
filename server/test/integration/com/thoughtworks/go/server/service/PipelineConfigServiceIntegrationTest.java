@@ -69,7 +69,7 @@ public class PipelineConfigServiceIntegrationTest {
         pipelineConfigService.updatePipelineConfig(user, pipelineConfig, result);
 
         assertThat(result.toString(), result.isSuccessful(), is(true));
-        StageConfig newlyAddedStage = goConfigService.getConfigForEditing().getPipelineConfigByName(pipelineConfig.name()).getStage(new CaseInsensitiveString("additional_stage"));
+        StageConfig newlyAddedStage = goConfigDao.loadForEditing().getPipelineConfigByName(pipelineConfig.name()).getStage(new CaseInsensitiveString("additional_stage"));
         assertThat(newlyAddedStage, is(not(nullValue())));
         assertThat(newlyAddedStage.getJobs().isEmpty(), is(false));
         assertThat(newlyAddedStage.getJobs().first().name().toString(), is("addtn_job"));

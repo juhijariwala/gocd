@@ -139,22 +139,18 @@ public class CachedFileGoConfig implements CachedGoConfig {
         return saveResult.getConfigSaveState();
     }
 
-
     public synchronized void writePipelineWithLock(PipelineConfig pipelineConfig) {
         GoConfigHolder serverCopy = new GoConfigHolder(currentConfig, currentConfigForEdit);
+        writePipelineWithLock(pipelineConfig, serverCopy);
+    }
+
+    public synchronized PipelineConfigSaveResult writePipelineWithLock(PipelineConfig pipelineConfig, GoConfigHolder serverCopy) {
         PipelineConfigSaveResult saveResult = dataSource.writePipelineWithLock(pipelineConfig, serverCopy);
         saveValidConfigToCacheAndNotifyPipelineConfigChangeListeners(saveResult);
+        return saveResult;
     }
 
-    private synchronized void saveValidConfigToCacheAndNotifyConfigChangeListeners(GoConfigHolder configHolder) {
-        saveValidConfigToCache(configHolder);
-        if(configHolder!=null) {
-            notifyListeners(currentConfig);
-        }
-    }
-
-
-    private void saveValidConfigToCacheAndNotifyPipelineConfigChangeListeners(PipelineConfigSaveResult saveResult) {
+    private void saveValidConfigToCacheAndNotifyPipelineConfigChangeListeners(CachedFileGoConfig.PipelineConfigSaveResult saveResult) {
         saveValidConfigToCache(saveResult.getConfigHolder());
         LOGGER.info("About to notify pipeline config listeners");
 
@@ -169,6 +165,13 @@ public class CachedFileGoConfig implements CachedGoConfig {
             }
         }
         LOGGER.info("Finished notifying pipeline config listeners");
+    }
+
+    private synchronized void saveValidConfigToCacheAndNotifyConfigChangeListeners(GoConfigHolder configHolder) {
+        saveValidConfigToCache(configHolder);
+        if(configHolder!=null) {
+            notifyListeners(currentConfig);
+        }
     }
 
     private synchronized void saveValidConfigToCache(GoConfigHolder configHolder) {
