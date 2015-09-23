@@ -16,6 +16,12 @@
 
 require 'spec_helper'
 
+def pipeline_with_template
+  pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "${COUNT}", nil, true, MaterialConfigsMother.defaultMaterialConfigs(), ArrayList.new)
+  pipeline_config.setTemplateName(CaseInsensitiveString.new("template1"))
+  pipeline_config
+end
+
 describe ApiV1::Config::PipelineConfigRepresenter do
   it 'renders a pipeline with hal representation' do
     presenter   = ApiV1::Config::PipelineConfigRepresenter.new(get_pipeline_config)
@@ -27,6 +33,15 @@ describe ApiV1::Config::PipelineConfigRepresenter do
     expect(actual_json).to have_link(:doc).with_url('http://api.go.cd/#pipeline_config')
     actual_json.delete(:_links)
     expect(actual_json).to eq(pipeline_hash)
+  end
+
+  it 'should serialize pipeline with template' do
+    pipeline_config = pipeline_with_template
+    presenter = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
+    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+
+    actual_json.delete(:_links)
+    expect(actual_json).to eq(pipeline_with_template_hash)
   end
 
   it "should convert from full blown document to PipelineConfig" do
@@ -157,6 +172,16 @@ describe ApiV1::Config::PipelineConfigRepresenter do
       stages:                  get_pipeline_config.getStages().collect { |j| ApiV1::Config::StageRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       tracking_tool:           ApiV1::Config::TrackingTool::TrackingToolRepresenter.new(get_pipeline_config.getTrackingTool).to_hash(url_builder: UrlBuilder.new),
       timer:                   ApiV1::Config::TimerRepresenter.new(get_pipeline_config.getTimer).to_hash(url_builder: UrlBuilder.new)
+    }
+  end
+
+  def pipeline_with_template_hash
+    {
+      name:                    "wunderbar",
+      enable_pipeline_locking: false,
+      label_template: "${COUNT}",
+      materials:               pipeline_with_template.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
+      template:                "template1"
     }
   end
 

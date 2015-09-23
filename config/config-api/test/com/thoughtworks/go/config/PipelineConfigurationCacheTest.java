@@ -160,7 +160,7 @@ public class PipelineConfigurationCacheTest {
     }
 
     @Test
-    public void shouldGetDependencyMaterialsForAPipeline(){
+    public void shouldGetDependencyMaterialsForAPipeline() {
         BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1", "p2", "p3");
         PipelineConfig p1 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p1"));
         PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
@@ -174,5 +174,14 @@ public class PipelineConfigurationCacheTest {
         assertThat(configCache.getDependencyMaterialsFor(p1.name()).getDependencies().isEmpty(), is(true));
         assertThat(configCache.getDependencyMaterialsFor(p2.name()).getDependencies(), contains(p1.name()));
         assertThat(configCache.getDependencyMaterialsFor(p3.name()).getDependencies(), contains(p2.name(), p1.name()));
+    }
+
+    @Test
+    public void shouldCheckForExistenceOfTemplate(){
+        BasicCruiseConfig cruiseConfig = new BasicCruiseConfig();
+        cruiseConfig.addTemplate(new PipelineTemplateConfig(new CaseInsensitiveString("t1")));
+        configCache.onConfigChange(cruiseConfig);
+        assertThat(configCache.doesTemplateExist(new CaseInsensitiveString("t1")), is(true));
+        assertThat(configCache.doesTemplateExist(new CaseInsensitiveString("t2")), is(false));
     }
 }

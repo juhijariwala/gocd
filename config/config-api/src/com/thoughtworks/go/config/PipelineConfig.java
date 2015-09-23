@@ -149,12 +149,19 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
 
     public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
         validate(validationContext);
-        if (isEmpty()) {
+        if (isEmpty() && !hasTemplate()) {
             addError("stages", "A pipeline must have at least one stage");
         }
+        if (!isEmpty() && hasTemplate()) {
+            addError("stages", String.format("Cannot add stages to pipeline '%s' which already references template '%s'", name, templateName));
+            addError("template", String.format("Cannot set template '%s' on pipeline '%s' because it already has stages defined", templateName, name));
+        }
         boolean isValid = this.errors().isEmpty();
-
+        if(hasTemplate() && !validationContext.doesTemplateExist(templateName)){
+            addError("template", String.format("Template '%s' does not exist", templateName));
+        }
         PipelineConfigSaveValidationContext contextForChildren = validationContext.withParent(this);
+
         for (StageConfig stageConfig : getStages()) {
             isValid = stageConfig.validateTree(contextForChildren) && isValid;
         }
@@ -591,7 +598,7 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
     }
 
     public boolean hasTemplate() {
-        return templateName != null;
+        return templateName != null && !StringUtil.isBlank(templateName.toString());
     }
 
     public CaseInsensitiveString getTemplateName() {

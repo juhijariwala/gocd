@@ -21,6 +21,7 @@ import com.thoughtworks.go.config.materials.mercurial.HgMaterialConfig;
 import com.thoughtworks.go.domain.PipelineGroups;
 import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.helper.PipelineConfigMother;
+import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -87,9 +88,20 @@ public class ConfigSaveValidationContextTest {
         ValidationContext context = ConfigSaveValidationContext.forChain(new PipelineConfig());
         assertThat(context.isWithinPipeline(), is(true));
     }
+
     @Test
-    public void shouldReturnIfTheContextBelongsToTemplate(){
+    public void shouldReturnIfTheContextBelongsToTemplate() {
         ValidationContext context = ConfigSaveValidationContext.forChain(new PipelineTemplateConfig());
         assertThat(context.isWithinPipeline(), is(false));
+    }
+
+    @Test
+    public void shouldCheckForExistenceOfTemplate(){
+        BasicCruiseConfig cruiseConfig = new BasicCruiseConfig();
+        cruiseConfig.addTemplate(new PipelineTemplateConfig(new CaseInsensitiveString("t1")));
+        ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
+
+        MatcherAssert.assertThat(context.doesTemplateExist(new CaseInsensitiveString("t1")), is(true));
+        MatcherAssert.assertThat(context.doesTemplateExist(new CaseInsensitiveString("t2")), is(false));
     }
 }

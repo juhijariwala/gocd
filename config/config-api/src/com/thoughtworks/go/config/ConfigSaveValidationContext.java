@@ -162,6 +162,11 @@ public class ConfigSaveValidationContext implements ValidationContext{
         return getCruiseConfig().server().security();
     }
 
+    @Override
+    public boolean doesTemplateExist(CaseInsensitiveString template) {
+        return getCruiseConfig().getTemplates().hasTemplateNamed(template);
+    }
+
     public String getParentDisplayName() {
         return getParentType().getAnnotation(ConfigTag.class).value();
     }

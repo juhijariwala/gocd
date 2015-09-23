@@ -111,4 +111,15 @@ public class PipelineConfigSaveValidationContextTest {
         ValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineTemplateConfig());
         Assert.assertThat(context.isWithinPipeline(), is(false));
     }
+
+    @Test
+    public void shouldCheckForExistenceOfTemplate(){
+        BasicCruiseConfig cruiseConfig = new BasicCruiseConfig();
+        cruiseConfig.addTemplate(new PipelineTemplateConfig(new CaseInsensitiveString("t1")));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+        PipelineConfigSaveValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineConfig());
+
+        assertThat(context.doesTemplateExist(new CaseInsensitiveString("t1")), is(true));
+        assertThat(context.doesTemplateExist(new CaseInsensitiveString("t2")), is(false));
+    }
 }
