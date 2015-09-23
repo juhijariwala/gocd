@@ -73,12 +73,12 @@ module ApiV1
       end
 
       def stages
-        pipeline.getStages()
+        pipeline.getStages() if !pipeline.getStages().isEmpty
       end
 
       def stages=(value)
         pipeline.getStages().clear()
-        value.each { |stage| pipeline.add(stage) }
+        value.each { |stage| pipeline.addStageWithoutValidityAssertion(stage) }
       end
 
       def tracking_tool
@@ -102,7 +102,6 @@ module ApiV1
         end
       end
 
-
       def enable_pipeline_locking
         pipeline.isLock
       end
@@ -112,18 +111,18 @@ module ApiV1
         pipeline.unlockExplicitly unless value
       end
 
-      def template_name
+      def template
         pipeline.getTemplateName().to_s if pipeline.getTemplateName()
       end
 
-      def template_name=(value)
+      def template=(value)
         pipeline.setTemplateName(CaseInsensitiveString.new(value)) if value
       end
 
       property :label_template
       property :enable_pipeline_locking, exec_context: :decorator
       property :name, exec_context: :decorator
-      property :template_name, skip_nil: true, exec_context: :decorator
+      property :template, skip_nil: true, exec_context: :decorator
 
       collection :params, exec_context: :decorator, decorator: ApiV1::Config::ParamRepresenter, class: com.thoughtworks.go.config.ParamConfig, skip_nil: true, render_empty: false
       collection :environment_variables, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig, skip_nil: true, render_empty: false
@@ -150,7 +149,7 @@ module ApiV1
                                        raise "Not implemented"
                                    end
                                  }
-      collection :stages, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::StageRepresenter, class: com.thoughtworks.go.config.StageConfig
+      collection :stages, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::StageRepresenter, class: com.thoughtworks.go.config.StageConfig, skip_nil: true
       property :tracking_tool, exec_context: :decorator, skip_nil: true, decorator: ApiV1::Config::TrackingTool::TrackingToolRepresenter, class: lambda { |hash, *|
            case hash["type"]
              when "external"

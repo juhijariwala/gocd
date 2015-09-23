@@ -21,6 +21,7 @@ import com.thoughtworks.go.config.materials.mercurial.HgMaterialConfig;
 import com.thoughtworks.go.domain.PipelineGroups;
 import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.helper.PipelineConfigMother;
+import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -80,5 +81,15 @@ public class ConfigSaveValidationContextTest {
         GoConfigMother.enableSecurityWithPasswordFile(cruiseConfig);
         ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
         assertThat(context.getServerSecurityConfig(), is(cruiseConfig.server().security()));
+    }
+
+    @Test
+    public void shouldCheckForExistenceOfTemplate(){
+        BasicCruiseConfig cruiseConfig = new BasicCruiseConfig();
+        cruiseConfig.addTemplate(new PipelineTemplateConfig(new CaseInsensitiveString("t1")));
+        ValidationContext context = ConfigSaveValidationContext.forChain(cruiseConfig);
+
+        MatcherAssert.assertThat(context.doesTemplateExist(new CaseInsensitiveString("t1")), is(true));
+        MatcherAssert.assertThat(context.doesTemplateExist(new CaseInsensitiveString("t2")), is(false));
     }
 }

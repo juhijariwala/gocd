@@ -51,6 +51,9 @@ public interface ValidationContext {
     PipelineConfig getPipelineConfigByName(CaseInsensitiveString pipelineName);
 
     boolean shouldCheckConfigRepo();
+
     SecurityConfig getServerSecurityConfig();
+
+    boolean doesTemplateExist(CaseInsensitiveString template);
 }
 

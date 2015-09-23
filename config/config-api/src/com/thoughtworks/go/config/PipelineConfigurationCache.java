@@ -110,6 +110,10 @@ public class PipelineConfigurationCache {
         }
     }
 
+    public boolean doesTemplateExist(CaseInsensitiveString template) {
+        return cruiseConfig.getTemplates().hasTemplateNamed(template);
+    }
+
     private class PipelineConfigMap {
         private Map<CaseInsensitiveString, HashMap> map = new ConcurrentHashMap<>();
 

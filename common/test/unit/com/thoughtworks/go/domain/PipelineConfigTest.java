@@ -37,6 +37,7 @@ import com.thoughtworks.go.helper.StageConfigMother;
 import com.thoughtworks.go.security.GoCipher;
 import com.thoughtworks.go.util.Node;
 import org.bouncycastle.crypto.InvalidCipherTextException;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.mockito.Matchers;
 
@@ -429,6 +430,7 @@ public class PipelineConfigTest {
         valueHashMap.put("param-value", "BAR");
         map.put(PipelineConfig.PARAMS, valueHashMap);
         map.put(PipelineConfig.CONFIGURATION_TYPE, PipelineConfig.CONFIGURATION_TYPE_TEMPLATE);
+        map.put(PipelineConfig.TEMPLATE_NAME, "template");
         pipelineConfig.setParams(mockParamsConfig);
 
         pipelineConfig.setConfigAttributes(map);
@@ -766,6 +768,10 @@ public class PipelineConfigTest {
         assertThat(config.hasTemplateApplied(), is(false));
         assertThat(config.getTemplateName(), is(new CaseInsensitiveString("template")));
         assertThat(config.isEmpty(), is(true));
+        config.templatize(new CaseInsensitiveString(""));
+        assertThat(config.hasTemplate(), is(false));
+        config.templatize(null);
+        assertThat(config.hasTemplate(), is(false));
     }
 
     @Test
@@ -1037,7 +1043,7 @@ public class PipelineConfigTest {
     }
 
     @Test
-    public void shouldDetectCyclicDependencies(){
+    public void shouldDetectCyclicDependencies() {
         String pipelineName = "p1";
         BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines(pipelineName, "p2", "p3");
         PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
@@ -1052,6 +1058,36 @@ public class PipelineConfigTest {
         p1.validateCyclicDependencies(PipelineConfigSaveValidationContext.forChain(p1));
         assertThat(p1.materialConfigs().errors().isEmpty(), is(false));
         assertThat(p1.materialConfigs().errors().on("base"), is("Circular dependency: p1 <- p2 <- p3 <- p1"));
+    }
+
+    @Test
+    public void shouldValidateThatPipelineAssociatedToATemplateDoesNotHaveStagesDefinedLocally(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("wunderbar"), new MaterialConfigs());
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("template-name"));
+        pipelineConfig.addStageWithoutValidityAssertion(new StageConfig(new CaseInsensitiveString("stage"), new JobConfigs()));
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().on("stages"), is("Cannot add stages to pipeline 'wunderbar' which already references template 'template-name'"));
+        assertThat(pipelineConfig.errors().on("template"), is("Cannot set template 'template-name' on pipeline 'wunderbar' because it already has stages defined"));
+    }
+
+    @Test
+    public void shouldAddValidationErrorWhenAssociatedTemplateDoesNotExist(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("wunderbar"), new MaterialConfigs());
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("does-not-exist"));
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig());
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().on("template"), is("Template 'does-not-exist' does not exist"));
+    }
+
+    @Test
+    public void shouldNotAddValidationErrorWhenAssociatedTemplateExists(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("wunderbar"), new MaterialConfigs());
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("t1"));
+        BasicCruiseConfig cruiseConfig = new BasicCruiseConfig();
+        cruiseConfig.addTemplate(new PipelineTemplateConfig(new CaseInsensitiveString("t1")));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().getAllOn("template"), is(CoreMatchers.nullValue()));
     }
 
     private StageConfig getStageConfig(String stageName, String jobName) {

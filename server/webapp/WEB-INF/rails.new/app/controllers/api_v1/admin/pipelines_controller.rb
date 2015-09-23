@@ -18,11 +18,10 @@ module ApiV1
   module Admin
     class PipelinesController < ApiV1::BaseController
       before_action :check_admin_user_and_401
+      before_action :load_pipeline, only: [:show]
       before_action :check_for_stale_request, :check_for_attempted_pipeline_rename, only: [:update]
 
       def show
-        check_admin_user_and_401
-        load_pipeline
         json = ApiV1::Config::PipelineConfigRepresenter.new(@pipeline_config).to_hash(url_builder: self)
         if stale?(etag: get_etag_for_pipeline(@pipeline_config.name.to_s, json))
           render json_hal_v1: json

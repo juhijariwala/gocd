@@ -142,4 +142,8 @@ public class PipelineConfigSaveValidationContext implements ValidationContext {
     public SecurityConfig getServerSecurityConfig() {
         return PipelineConfigurationCache.getInstance().getServerSecurityConfig();
     }
+
+    public boolean doesTemplateExist(CaseInsensitiveString template) {
+        return PipelineConfigurationCache.getInstance().doesTemplateExist(template);
+    }
 }
