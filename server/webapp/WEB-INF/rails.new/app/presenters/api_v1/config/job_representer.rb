@@ -20,13 +20,16 @@ module ApiV1
 
     property :name, exec_context: :decorator
     property :run_on_all_agents, exec_context: :decorator
-    property :run_instance_count, skip_nil: true
-    property :timeout, skip_nil: true
-    collection :environment_variables, exec_context: :decorator, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig, skip_nil: true, render_empty: false
-    collection :resources, exec_context: :decorator, skip_nil: true, render_empty: false
-    collection :tasks, exec_context: :decorator, decorator: ApiV1::Config::Tasks::TaskRepresenter, skip_nil: true, render_empty: false,
-            class: lambda { |hash, *|
-                case hash[:type] || hash['type']
+    property :run_instance_count
+    property :timeout
+    collection :environment_variables, exec_context: :decorator, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig
+    collection :resources, exec_context: :decorator, render_empty: false
+    collection :tasks, exec_context: :decorator, decorator: ApiV1::Config::Tasks::TaskRepresenter,
+               skip_parse: lambda{|fragment, options|
+                 !fragment.respond_to?(:has_key?)|| fragment.empty?
+               },
+            class: lambda { |object, *|
+                case object[:type] || object['type']
                   when "pluggable_task"
                     PluggableTask
                   when ExecTask::TYPE
@@ -40,24 +43,27 @@ module ApiV1
                   when FetchTask::TYPE
                     FetchTask
                   else
-                    raise "not implemented"
+                    raise UnprocessableEntity, "Invalid Task type: #{object['type']||object[:type]}. It can be one of '{pluggable_task, exec, Ant, nant, rake, fetch}'"
                 end
             }
 
-    collection :tabs, exec_context: :decorator, decorator: TabConfigRepresenter, class: com.thoughtworks.go.config.Tab, skip_nil: true, render_empty: false
-    collection :artifacts, exec_context: :decorator, decorator: ApiV1::Config::ArtifactRepresenter,skip_nil: true, render_empty: false,
-        class: lambda { |hash, *|
-          case hash['type'] || hash[:type]
-            when "build"
-              com.thoughtworks.go.config.ArtifactPlan
-            when "test"
-              com.thoughtworks.go.config.TestArtifactPlan
-            else
-              raise "Not implemented"
-          end
-        }
+    collection :tabs, exec_context: :decorator, decorator: TabConfigRepresenter, class: com.thoughtworks.go.config.Tab, render_empty: false
+    collection :artifacts, exec_context: :decorator, decorator: ApiV1::Config::ArtifactRepresenter, render_empty: false,
+               skip_parse: lambda{|fragment,options|
+                 !fragment.respond_to?(:has_key?)|| fragment.empty?
+               },
+                class: lambda { |object, *|
+                  case object['type'] || object[:type]
+                    when "build"
+                      com.thoughtworks.go.config.ArtifactPlan
+                    when "test"
+                      com.thoughtworks.go.config.TestArtifactPlan
+                    else
+                      raise UnprocessableEntity, "Invalid Artifact type: #{object['type']||object[:type]}. It can be one of '{build, test}'"
+                  end
+                }
 
-    collection :properties, exec_context: :decorator, decorator: ApiV1::Config::PropertyConfigRepresenter, class: com.thoughtworks.go.config.ArtifactPropertiesGenerator, skip_nil: true, render_empty: false
+    collection :properties, exec_context: :decorator, decorator: ApiV1::Config::PropertyConfigRepresenter, class: com.thoughtworks.go.config.ArtifactPropertiesGenerator, render_empty: false
     property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
     def name

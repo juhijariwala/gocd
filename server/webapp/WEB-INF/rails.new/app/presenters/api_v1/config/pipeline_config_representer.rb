@@ -82,16 +82,12 @@ module ApiV1
       end
 
       def tracking_tool
-        case pipeline.getIntegrationType
-          when PipelineConfig::INTEGRATION_TYPE_TRACKING_TOOL
-            pipeline.getTrackingTool() if pipeline.getTrackingTool()
-          when PipelineConfig::INTEGRATION_TYPE_MINGLE
-            pipeline.getMingleConfig() if pipeline.getMingleConfig().isDefined()
-          when PipelineConfig::INTEGRATION_TYPE_NONE
-            nil
-          else
-            raise "Not implemented"
-        end
+            if pipeline.getTrackingTool()
+              pipeline.getTrackingTool()
+            elsif pipeline.getMingleConfig().isDefined()
+              pipeline.getMingleConfig()
+            end
+
       end
 
       def tracking_tool=(value)
@@ -122,46 +118,57 @@ module ApiV1
       property :label_template
       property :enable_pipeline_locking, exec_context: :decorator
       property :name, exec_context: :decorator
-      property :template, skip_nil: true, exec_context: :decorator
+      property :template, exec_context: :decorator
 
-      collection :params, exec_context: :decorator, decorator: ApiV1::Config::ParamRepresenter, class: com.thoughtworks.go.config.ParamConfig, skip_nil: true, render_empty: false
-      collection :environment_variables, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig, skip_nil: true, render_empty: false
+      collection :params, exec_context: :decorator, decorator: ApiV1::Config::ParamRepresenter, class: com.thoughtworks.go.config.ParamConfig
+      collection :environment_variables, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig
       collection :materials, exec_context: :decorator, decorator: ApiV1::Config::Materials::MaterialRepresenter,
-                     class: lambda { |hash, *|
-                                   case hash['type'] || hash[:type]
-                                     when GitMaterialConfig::TYPE
-                                       GitMaterialConfig
-                                     when SvnMaterialConfig::TYPE
-                                       SvnMaterialConfig
-                                     when HgMaterialConfig::TYPE
-                                       HgMaterialConfig
-                                     when P4MaterialConfig::TYPE
-                                       P4MaterialConfig
-                                     when TfsMaterialConfig::TYPE
-                                       TfsMaterialConfig
-                                     when DependencyMaterialConfig::TYPE
-                                       DependencyMaterialConfig
-                                     when PackageMaterialConfig::TYPE
-                                       PackageMaterialConfig
-                                     when PluggableSCMMaterialConfig::TYPE
-                                       PluggableSCMMaterialConfig
-                                     else
-                                       raise "Not implemented"
-                                   end
-                                 }
-      collection :stages, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::StageRepresenter, class: com.thoughtworks.go.config.StageConfig, skip_nil: true
-      property :tracking_tool, exec_context: :decorator, skip_nil: true, decorator: ApiV1::Config::TrackingTool::TrackingToolRepresenter, class: lambda { |hash, *|
-           case hash["type"]
-             when "external"
-               com.thoughtworks.go.config.TrackingTool
-             when "mingle"
-               com.thoughtworks.go.config.MingleConfig
-             else
-               raise "Not implemented"
-           end
-         }
-      property :timer, skip_nil: true, decorator: ApiV1::Config::TimerRepresenter, class: com.thoughtworks.go.config.TimerConfig
-      property :errors, exec_context: :decorator,decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
+                 skip_parse:           lambda { |fragment, options|
+                   !fragment.respond_to?(:has_key?) || fragment.empty?
+                 },
+                 class:                    lambda { |object, *|
+                   case object['type'] || object[:type]
+                     when GitMaterialConfig::TYPE
+                       GitMaterialConfig
+                     when SvnMaterialConfig::TYPE
+                       SvnMaterialConfig
+                     when HgMaterialConfig::TYPE
+                       HgMaterialConfig
+                     when P4MaterialConfig::TYPE
+                       P4MaterialConfig
+                     when TfsMaterialConfig::TYPE
+                       TfsMaterialConfig
+                     when DependencyMaterialConfig::TYPE
+                       DependencyMaterialConfig
+                     when PackageMaterialConfig::TYPE
+                       PackageMaterialConfig
+                     when PluggableSCMMaterialConfig::TYPE
+                       PluggableSCMMaterialConfig
+                     else
+                       raise UnprocessableEntity, "Invalid Material type :#{object['type']||object[:type]}. It can be one of '{DependencyMaterial, SvnMaterial, HgMaterial, P4Material, GitMaterial, TfsMaterial, PackageMaterial, PluggableSCMMaterial}"
+                   end
+                 }
+      collection :stages, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::StageRepresenter, class: com.thoughtworks.go.config.StageConfig
+
+      property :tracking_tool,
+               exec_context: :decorator,
+               decorator:    ApiV1::Config::TrackingTool::TrackingToolRepresenter,
+               skip_parse:           lambda { |fragment, options|
+                 !fragment.respond_to?(:has_key?) || fragment.empty?
+               },
+               class: lambda { |object, *|
+                 case object['type']
+                   when 'external'
+                     com.thoughtworks.go.config.TrackingTool
+                   when 'mingle'
+                     com.thoughtworks.go.config.MingleConfig
+                   else
+                     raise UnprocessableEntity, "Invalid Tracking Tool type. It can be one of '{mingle, external}"
+                 end
+               }
+
+      property :timer, decorator: ApiV1::Config::TimerRepresenter, class: com.thoughtworks.go.config.TimerConfig
+      property :errors, exec_context: :decorator, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
       def errors
         pipeline.errors.addAll(pipeline.materialConfigs.errors)

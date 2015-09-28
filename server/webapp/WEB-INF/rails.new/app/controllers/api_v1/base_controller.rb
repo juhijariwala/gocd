@@ -49,6 +49,7 @@ module ApiV1
 
     rescue_from RecordNotFound, with: :render_not_found_error
     rescue_from BadRequest, with: :render_bad_request
+    rescue_from UnprocessableEntity, with: :render_unprocessable_entity_error
 
     class << self
       def default_accepts_header
@@ -75,6 +76,10 @@ module ApiV1
 
     def render_message(message, status)
       render json_hal_v1: { message: message.strip }, status: status
+    end
+
+    def render_unprocessable_entity_error(exception)
+      render_message("Your request could not be processed. #{exception.message}", 422)
     end
   end
 end

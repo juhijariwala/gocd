@@ -224,6 +224,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
     {
       type:       P4MaterialConfig::TYPE,
       attributes: {
+        url:                nil,
         destination:        "dest-folder",
         filter:             {
           ignore: [
@@ -306,9 +307,13 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
     {
       type:       GitMaterialConfig::TYPE,
       attributes: {
-        url:              "http://user:password@funk.com/blank",
-        branch:           "master",
-        auto_update:      true
+        url:         "http://user:password@funk.com/blank",
+        destination: nil,
+        filter:      nil,
+        name:        nil,
+        auto_update: true,
+        branch:      "master",
+        submodule_folder: nil
       }
     }
   end

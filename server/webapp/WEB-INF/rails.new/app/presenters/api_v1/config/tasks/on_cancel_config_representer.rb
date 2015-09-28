@@ -35,7 +35,7 @@ module ApiV1
                           when "pluggable_task"
                             PluggableTask.new
                           else
-                            raise "not implemented"
+                            raise UnprocessableEntity, "Invalid Task type: #{hash['type']||hash[:type]}.It can be one of '{pluggable_task, exec, Ant, nant, rake, fetch}'"
                         end
           representer = TaskRepresenter.new(task)
           representer.from_hash(hash, options)

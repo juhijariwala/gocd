@@ -53,55 +53,61 @@ describe ApiV1::Config::JobRepresenter do
   end
 
   def job_hash_with_errors job
-          {
-              name: "",
-              run_on_all_agents: false,
-              tasks: [
-                  {
-                      type: "fetch",
-                      attributes: {pipeline: "", stage: "", job: "", is_source_a_file: false, source: nil, destination: ""},
-                      errors: {
-                        job: ["Job is a required field."],
-                        src: ["Should provide either srcdir or srcfile"],
-                        stage: ["Stage is a required field."]
-                      }
-                  }
-              ],
-              tabs: [
-                  {
-                      name: "coverage#1",
-                      path: "/Jcoverage/index.html",
-                      errors: {
-                        name: ["Tab name 'coverage#1' is not unique.",
-                               "Tab name 'coverage#1' is invalid. This must be alphanumeric and can contain underscores and periods."
-                        ]
-                      }
-                  },
-                  {
-                      name: "coverage#1",
-                      path: "/Jcoverage/path.html",
-                      errors: {
-                        name: ["Tab name 'coverage#1' is not unique.",
-                               "Tab name 'coverage#1' is invalid. This must be alphanumeric and can contain underscores and periods."
-                        ]
-                      }
-                  }
-              ],
-              artifacts: [
-                           {
-                             source: nil,
-                             destination: "../foo",
-                             type: "test",
-                              errors: {
-                                 source: ["Job 'null' has an artifact with an empty source"],
-                                 destination: ["Invalid destination path. Destination path should match the pattern "+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN]
-                              }
-                           }
-                         ],
-              errors: {
-                name: ["Name is a required field"]
-              }
-          }
+    {
+      name:                  "",
+      run_on_all_agents:     false,
+      run_instance_count:    nil,
+      timeout:               nil,
+      environment_variables: [],
+      resources:             nil,
+      tasks:                 [
+                               {
+                                 type:       "fetch",
+                                 attributes: {pipeline: nil, stage: nil, job: nil, is_source_a_file: false, source: nil, destination: ""},
+                                 errors:     {
+                                   job:   ["Job is a required field."],
+                                   src:   ["Should provide either srcdir or srcfile"],
+                                   stage: ["Stage is a required field."]
+                                 }
+                               }
+                             ],
+      tabs:                  [
+                               {
+                                 name:   "coverage#1",
+                                 path:   "/Jcoverage/index.html",
+                                 errors: {
+                                   name: ["Tab name 'coverage#1' is not unique.",
+                                          "Tab name 'coverage#1' is invalid. This must be alphanumeric and can contain underscores and periods."
+                                         ]
+                                 }
+                               },
+                               {
+                                 name:   "coverage#1",
+                                 path:   "/Jcoverage/path.html",
+                                 errors: {
+                                   name: ["Tab name 'coverage#1' is not unique.",
+                                          "Tab name 'coverage#1' is invalid. This must be alphanumeric and can contain underscores and periods."
+                                         ]
+                                 }
+                               }
+                             ],
+      artifacts:             [
+                               {
+                                 source:      nil,
+                                 destination: "../foo",
+                                 type:        "test",
+                                 errors:      {
+                                   destination: ["Invalid destination path. Destination path should match the pattern "+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN],
+                                   source:      ["Job 'null' has an artifact with an empty source"]
+
+                                 }
+                               }
+                             ],
+      properties: nil,
+      errors:                {
+        name: ["Name is a required field"]
+      }
+    }
   end
 
   def get_job_config

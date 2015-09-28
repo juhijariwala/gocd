@@ -21,9 +21,9 @@ module ApiV1
                 alias_method :material_config, :represented
         
                 property :url, exec_context: :decorator
-                property :folder, as: :destination, skip_nil: true
-                property :filter, exec_context: :decorator, decorator: ApiV1::Config::Materials::FilterRepresenter, class: com.thoughtworks.go.config.materials.Filter, skip_nil: true
-                property :name, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String, skip_nil: true
+                property :folder, as: :destination
+                property :filter, exec_context: :decorator, decorator: ApiV1::Config::Materials::FilterRepresenter, class: com.thoughtworks.go.config.materials.Filter
+                property :name, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String
                 property :auto_update, exec_context: :decorator
 
 

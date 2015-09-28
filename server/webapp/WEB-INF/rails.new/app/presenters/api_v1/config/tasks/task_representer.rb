@@ -22,6 +22,9 @@ module ApiV1
         property :type, exec_context: :decorator, skip_parse: true
 
         nested :attributes,
+               skip_parse:           lambda { |fragment, options|
+                 !fragment.respond_to?(:has_key?) || fragment.empty?
+               },
                  decorator: lambda { |task, *|
                    if task.instance_of? PluggableTask
                      PluggableTaskRepresenter
@@ -38,7 +41,7 @@ module ApiV1
                        when FetchTask::TYPE
                          FetchTaskRepresenter
                        else
-                         raise "not implemented"
+                         raise UnprocessableEntity, "Invalid Task type: #{hash['type']||hash[:type]}. It can be one of '{pluggable_task, exec, Ant, nant, rake, fetch}'"
                      end
                    end
                  }

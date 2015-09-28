@@ -40,8 +40,6 @@ module ApiV1
                        PackageMaterialRepresenter
                      when 'com.thoughtworks.go.config.materials.PluggableSCMMaterialConfig'
                        PluggableScmMaterialRepresenter
-                     else
-                       raise "Not implemented"
                    end
                  }
         property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
