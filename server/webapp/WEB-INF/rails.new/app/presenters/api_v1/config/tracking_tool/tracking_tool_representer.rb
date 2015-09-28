@@ -28,7 +28,7 @@ module ApiV1
                     when 'com.thoughtworks.go.config.TrackingTool'
                       ExternalTrackingToolRepresenter
                     else
-                      raise "Not implemented"
+                      raise UnprocessableEntity, "Invalid Tracking Tool type. It can be one of '{mingle, external}'"
                   end
                 }
 
@@ -67,7 +67,7 @@ module ApiV1
           elsif tracking_tool.instance_of? com.thoughtworks.go.config.TrackingTool
             "external"
           else
-            raise "not implemented"
+            raise UnprocessableEntity, "Invalid Tracking Tool type. It can be one of '{mingle, external}'"
           end
         end
       end

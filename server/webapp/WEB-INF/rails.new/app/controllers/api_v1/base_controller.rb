@@ -48,7 +48,8 @@ module ApiV1
     end
 
     rescue_from RecordNotFound, with: :render_not_found_error
-    rescue_from BadRequest,     with: :render_bad_request
+    rescue_from BadRequest, with: :render_bad_request
+    rescue_from UnprocessableEntity, with: :render_unprocessable_entity_error
 
     class << self
       def default_accepts_header
@@ -70,6 +71,10 @@ module ApiV1
       else
         render json_hal_v1: { message: result.message(Spring.bean('localizer')).strip }.merge(data), status: result.httpCode()
       end
+    end
+
+    def render_unprocessable_entity_error(exception)
+      render :json_hal_v2 => { :message => "Your request could not be processed. #{exception.message}" }, :status => 422
     end
   end
 end

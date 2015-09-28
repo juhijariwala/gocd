@@ -20,7 +20,7 @@ module ApiV1
       class FilterRepresenter < ApiV1::BaseRepresenter
         alias_method :filter, :represented
 
-        collection :ignore, exec_context: :decorator, skip_nil: true, render_empty: false
+        collection :ignore, exec_context: :decorator
 
         def to_hash(*options)
           ignored_files=filter.map { |item| item.getPattern() }

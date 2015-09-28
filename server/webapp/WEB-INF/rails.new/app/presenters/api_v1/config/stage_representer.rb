@@ -24,7 +24,7 @@ module ApiV1
     property :clean_working_directory, exec_context: :decorator
     property :never_cleanup_artifacts, exec_context: :decorator
     property :approval, decorator: ApiV1::Config::ApprovalRepresenter, class: com.thoughtworks.go.config.Approval
-    collection :environment_variables, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig, skip_nil: true, render_empty: false
+    collection :environment_variables, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig
     collection :jobs, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::JobRepresenter, class: com.thoughtworks.go.config.JobConfig
     property :errors, exec_context: :decorator,decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 

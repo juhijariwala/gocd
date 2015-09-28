@@ -86,11 +86,16 @@ describe ApiV1::Config::PipelineConfigRepresenter do
         label_template:          "",
         enable_pipeline_locking: false,
         name:                    "wunderbar",
+        template: nil,
+        params: [],
+        environment_variables: [],
         materials:               [],
-        stages:                  [],
+        stages:                  nil,
+        tracking_tool:           nil,
         timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax"]}},
         errors: {
            materials: ["A pipeline must have at least one material"],
+           base:["Pipeline \"wunderbar\" does not exist."],
            labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."],
            stages: ["A pipeline must have at least one stage"]
         }
@@ -102,6 +107,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
         label_template:          "foo-1.0.${COUNT}-${svn}",
         enable_pipeline_locking: false,
         name:                    "wunderbar",
+        template: nil,
         params: [
           {
               name: nil, value: "echo",
@@ -113,6 +119,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
               }
           }
         ],
+        environment_variables: [],
         materials: [
           {
               type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
@@ -122,7 +129,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
               errors: {folder: ["Destination directory is required when specifying multiple scm materials"], url: ["URL cannot be blank"]}
           }
         ],
-        stages:  [{name: "stage1", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}}, jobs: []}],
+        stages:  [{name: "stage1", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}},environment_variables: [], jobs: []}],
         timer: {spec: "0 0 22 ? * MON-FRI", only_on_changes: true},
         tracking_tool: {
           type: "external", attributes: {link: "", regex: ""},
@@ -166,6 +173,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
       label_template:          "foo-1.0.${COUNT}-${svn}",
       enable_pipeline_locking: false,
       name:                    "wunderbar",
+      template: nil,
       params:                  get_pipeline_config.getParams().collect { |j| ApiV1::Config::ParamRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       environment_variables:   get_pipeline_config.variables().collect { |j| ApiV1::Config::EnvironmentVariableRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       materials:               get_pipeline_config.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
@@ -177,11 +185,16 @@ describe ApiV1::Config::PipelineConfigRepresenter do
 
   def pipeline_with_template_hash
     {
-      name:                    "wunderbar",
-      enable_pipeline_locking: false,
       label_template: "${COUNT}",
+      enable_pipeline_locking: false,
+      name:                    "wunderbar",
+      template:                "template1",
+      params: [],
+      environment_variables:[],
       materials:               pipeline_with_template.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
-      template:                "template1"
+      stages: nil,
+      tracking_tool: nil,
+      timer: nil
     }
   end
 

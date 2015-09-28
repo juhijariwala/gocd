@@ -21,7 +21,7 @@ module ApiV1
             class PerforceMaterialRepresenter < ScmMaterialRepresenter
                 alias_method :material_config, :represented
         
-                property :url, skip_nil: true, exec_context: :decorator
+                property :url, exec_context: :decorator
                 property :server_and_port, as: :port
                 property :user_name, as: :username
                 property :password, skip_nil: true, exec_context: :decorator

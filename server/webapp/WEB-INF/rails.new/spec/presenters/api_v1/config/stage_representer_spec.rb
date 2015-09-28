@@ -157,7 +157,7 @@ describe ApiV1::Config::StageRepresenter do
               tasks: [
                   {
                       type: "fetch",
-                      attributes: {pipeline: "", stage: "", job: "", is_source_a_file: false, source: nil, destination: ""},
+                      attributes: {pipeline: nil, stage: nil, job: nil, is_source_a_file: false, source: nil, destination: ""},
                       errors: {
                         job: ["Job is a required field."],
                         src: ["Should provide either srcdir or srcfile"],

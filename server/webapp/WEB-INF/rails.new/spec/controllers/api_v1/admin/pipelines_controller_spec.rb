@@ -137,6 +137,23 @@ describe ApiV1::Admin::PipelinesController do
           expect(actual_response).to eq({:message=>"Someone has modified the configuration for pipeline 'pipeline1'. Please update your copy of the config with the changes."})
         end
 
+        it "should not update pipeline config if Invalid task type is passed in hash" do
+          controller.request.env['HTTP_IF_MATCH'] = "\"#{Digest::MD5.hexdigest("latest-etag")}\""
+
+          put_with_api_header :update, name: @pipeline_name, :pipeline => pip("pipeline1","invalid_task")
+
+          expect(response.code).to eq("422")
+          expect(actual_response).to eq({:message=>"Your request could not be processed. Invalid Task type: invalid_task. One of '{pluggable_task, exec, Ant, nant, rake, fetch}"})
+        end
+        it "should not update pipeline config if Invalid material type is passed in hash" do
+          controller.request.env['HTTP_IF_MATCH'] = "\"#{Digest::MD5.hexdigest("latest-etag")}\""
+
+          put_with_api_header :update, name: @pipeline_name, :pipeline => pip("pipeline1","invalid_material","exec")
+
+          expect(response.code).to eq("422")
+          expect(actual_response).to eq({:message=>"Your request could not be processed. Invalid Material type: invalid_material. One of '{DependencyMaterial, SvnMaterial, HgMaterial, P4Material, GitMaterial, TfsMaterial, PackageMaterial, PluggableSCMMaterial}"})
+        end
+
         it "should not update pipeline config if no etag is passed" do
           put_with_api_header :update, name: @pipeline_name, :pipeline => pip
 
@@ -217,141 +234,10 @@ describe ApiV1::Admin::PipelinesController do
         }
       end
      
-
-
-      def pip (pipeline_name="pipeline1")
-        { _links: { self: { href: "http://localhost:8153/go/api/admin/pipelines/up42" }, doc: { href: "http://api.go.cd/#pipeline_config" }, find: { href: "http://localhost:8153/go/api/admin/pipelines/:name" } }, label_template: "Jyoti-${COUNT}", enable_pipeline_locking: false, name: "#{pipeline_name}", template_name: nil, params: [], environment_variables: [ ], materials: [ { type: "HgMaterial", attributes: { url: "../manual-testing/ant_hg/dummy", destination: "dest_dir", filter: { ignore: [ ] } }, name: "dummyhg", auto_update: true } ], stages: [ { name: "up42_stage", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: { type: "success", authorization: { roles: [ ], users: [ ] } }, environment_variables: [ ], jobs: [ { name: "up42_job", run_on_all_agents: false, environment_variables: [ ], resources: [ ], tasks: [ { type: "exec", attributes: { command: "ls", working_dir: nil }, run_if: [ ] } ], tabs: [ ], artifacts: [ ], properties: [ ] } ] } ], mingle: { base_url: nil, project_identifier: nil, mql_grouping_conditions: nil }}
+      def pip (pipeline_name="pipeline1",material_type="HgMaterial",task_type="exec")
+        { _links: { self: { href: "http://localhost:8153/go/api/admin/pipelines/up42" }, doc: { href: "http://api.go.cd/#pipeline_config" }, find: { href: "http://localhost:8153/go/api/admin/pipelines/:name" } }, label_template: "Jyoti-${COUNT}", enable_pipeline_locking: false, name: "#{pipeline_name}", template_name: nil, params: [], environment_variables: [ ], materials: [ { type: "#{material_type}", attributes: { url: "../manual-testing/ant_hg/dummy", destination: "dest_dir", filter: { ignore: [ ] } }, name: "dummyhg", auto_update: true } ], stages: [ { name: "up42_stage", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: { type: "success", authorization: { roles: [ ], users: [ ] } }, environment_variables: [ ], jobs: [ { name: "up42_job", run_on_all_agents: false, environment_variables: [ ], resources: [ ], tasks: [ { type: "#{task_type}", attributes: { command: "ls", working_dir: nil }, run_if: [ ] } ], tabs: [ ], artifacts: [ ], properties: [ ] } ] } ], mingle: { base_url: nil, project_identifier: nil, mql_grouping_conditions: nil }}
       end
 
-      def pipeline_hash
-        {
-            label_template: "foo-1.0.${COUNT}-${svn}",
-            enable_pipeline_locking: false,
-            name: "wunderbar",
-            template_name: "",
-            params: [
-                {
-                    name: "COMMAND",
-                    value: "echo"
-                },
-                {
-                    name: "WORKING_DIR",
-                    value: "/repo/branch"
-                }
-            ],
-            environment_variables: [
-                {
-                    name: "MULTIPLE_LINES",
-                    value: "****",
-                    secure: true
-                },
-                {
-                    name: "COMPLEX",
-                    value: "This has very <complex> data",
-                    secure: false
-                }
-            ],
-            materials: [
-                {
-                    type: "SvnMaterial",
-                    name: "http___some_svn_url",
-                    auto_update: true,
-                    url: "http://some/svn/url",
-                    destination: "svnDir",
-                    filter: { ignore: []},
-                    check_externals: false,
-                    username: nil,
-                    password: nil
-                }
-            ],
-            stages: [
-                {
-                    name: "stage1",
-                    fetch_materials: true,
-                    clean_working_directory: false,
-                    never_clean_artifacts: false,
-                    approval: {
-                        type: "success",
-                        authorization: {
-                            roles: [],
-                            users: []
-                        }
-                    },
-                    environment_variables: [
-                        {
-                            name: "MULTIPLE_LINES",
-                            value: "****",
-                            secure: true
-                        },
-                        {
-                            name: "COMPLEX",
-                            value: "This has very <complex> data",
-                            secure: false
-                        }
-                    ],
-                    jobs: [
-                        {
-                            name: "defaultJob",
-                            run_on_all_agents: false,
-                            run_instance_count: "3",
-                            timeout: "100",
-                            environment_variables: [
-                                {name: "MULTIPLE_LINES", value: "****", secure: true}, {name: "COMPLEX", value: "This has very <complex> data", secure: false}
-                            ],
-                            resources: [
-                                "Linux",
-                                "Java"
-                            ],
-                            tasks: [
-                                {type: "ant", attributes: {working_dir: "working-directory", build_file: "build-file", target: "target"}, run_if: []}
-                            ],
-                            # artifacts: [
-                            #     {
-                            #         src: "target/dist.jar",
-                            #         dest: "pkg",
-                            #         type: "build"
-                            #     },
-                            #     {
-                            #         src: "target/reports/**/*Test.xml",
-                            #         dest: "reports",
-                            #         type: "test"
-                            #     }
-                            # ],
-                            tabs: [
-                                {
-                                    name: "coverage",
-                                    path: "Jcoverage/index.html"
-                                },
-                                {
-                                    name: "something",
-                                    path: "something/path.html"
-                                }
-                            ],
-                            properties: [
-                                {
-                                    name: "coverage.class",
-                                    src: "target/emma/coverage.xml",
-                                    xpath: "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ],
-            # tracking_tool: {
-            #   type: "mingle",
-            #   attributes: {
-            #     base_url: "http://mingle.example.com",
-            #     project_identifier: "my_project",
-            #     grouping_conditions: "status > 'In Dev'"
-            #   }
-            # },
-            timer: {
-                spec: "0 0 22 ? * MON-FRI",
-                only_on_changes: true
-            }
-        }
-      end
     end
   end
 end
