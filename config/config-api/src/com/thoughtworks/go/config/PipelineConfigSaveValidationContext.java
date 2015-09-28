@@ -21,10 +21,12 @@ import com.thoughtworks.go.config.remote.ConfigReposConfig;
 import com.thoughtworks.go.util.Node;
 import org.apache.commons.lang.NotImplementedException;
 
-import java.util.Hashtable;
+import java.util.List;
+import java.util.Set;
 
 public class PipelineConfigSaveValidationContext implements ValidationContext {
     private final Validatable immediateParent;
+    private PipelineConfig pipelineBeingValidated;
     private boolean isWithinPipelines;
     private final PipelineConfigSaveValidationContext parentContext;
     private PipelineConfig pipeline;
@@ -37,6 +39,9 @@ public class PipelineConfigSaveValidationContext implements ValidationContext {
     }
 
     private PipelineConfigSaveValidationContext(Validatable immediateParent, PipelineConfigSaveValidationContext parentContext) {
+        this.pipelineBeingValidated = parentContext.pipelineBeingValidated;
+        if (parentContext.pipelineBeingValidated == null)
+            this.pipelineBeingValidated = (PipelineConfig) immediateParent;
         this.immediateParent = immediateParent;
         this.parentContext = parentContext;
         if (immediateParent instanceof PipelineConfig) {
@@ -130,6 +135,7 @@ public class PipelineConfigSaveValidationContext implements ValidationContext {
     }
 
     public PipelineConfig getPipelineConfigByName(CaseInsensitiveString pipelineName) {
+        if(pipelineBeingValidated.name().equals(pipelineName)) return pipelineBeingValidated;
         return PipelineConfigurationCache.getInstance().getPipelineConfig(pipelineName.toString());
     }
 
@@ -145,5 +151,9 @@ public class PipelineConfigSaveValidationContext implements ValidationContext {
 
     public boolean doesTemplateExist(CaseInsensitiveString template) {
         return PipelineConfigurationCache.getInstance().doesTemplateExist(template);
+    }
+
+    public Set<CaseInsensitiveString> getPipelinesWithDependencyMaterials() {
+        return PipelineConfigurationCache.getInstance().getPipelinesWithDependencyMaterials();
     }
 }

@@ -23,10 +23,7 @@ import com.thoughtworks.go.domain.PipelineGroups;
 import com.thoughtworks.go.domain.materials.MaterialConfig;
 import com.thoughtworks.go.util.Node;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PipelineConfigurationCache {
@@ -83,10 +80,8 @@ public class PipelineConfigurationCache {
     }
 
     public void onPipelineConfigChange(PipelineConfig pipelineConfig, String group) {
-        initPipelineConfigMap();
         initMaterialConfigMap();
-        initDependencies();
-        dependencies.put(pipelineConfig.name(), pipelineConfig.getDependenciesAsNode());
+        getDependencies().put(pipelineConfig.name(), pipelineConfig.getDependenciesAsNode());
         pipelineConfigHashMap.update(pipelineConfig, group);
         materialConfigsFingerprintMap.update(pipelineConfig);
     }
@@ -96,9 +91,13 @@ public class PipelineConfigurationCache {
     }
 
     public Node getDependencyMaterialsFor(CaseInsensitiveString pipelineName) {
+        return getDependencies().get(pipelineName) != null? getDependencies().get(pipelineName): new Node(new ArrayList<Node.DependencyNode>());
+    }
+
+    private Hashtable<CaseInsensitiveString, Node> getDependencies(){
         initPipelineConfigMap();
         initDependencies();
-        return dependencies.get(pipelineName) != null? dependencies.get(pipelineName): new Node(new ArrayList<CaseInsensitiveString>());
+        return dependencies;
     }
 
     private void initDependencies() {
@@ -112,6 +111,10 @@ public class PipelineConfigurationCache {
 
     public boolean doesTemplateExist(CaseInsensitiveString template) {
         return cruiseConfig.getTemplates().hasTemplateNamed(template);
+    }
+
+    public Set<CaseInsensitiveString> getPipelinesWithDependencyMaterials() {
+        return getDependencies().keySet();
     }
 
     private class PipelineConfigMap {
@@ -192,5 +195,4 @@ public class PipelineConfigurationCache {
             return map.get(fingerprint);
         }
     }
-
 }

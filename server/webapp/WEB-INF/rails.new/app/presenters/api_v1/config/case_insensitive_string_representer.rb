@@ -19,11 +19,11 @@ module ApiV1
     alias_method :case_insensitive_string, :represented
 
     def from_hash name, options={}
-      CaseInsensitiveString.new(name)
+      CaseInsensitiveString.new(name) unless name.to_s.strip.empty?
     end
 
     def to_hash(*options)
-      case_insensitive_string.to_s
+      case_insensitive_string.to_s unless case_insensitive_string.to_s.strip.empty?
     end
 
   end

@@ -21,7 +21,7 @@ module ApiV1
             class GitMaterialRepresenter < ScmMaterialRepresenter
                 alias_method :material_config, :represented
                 property :branch
-                property :submodule_folder
+                property :submodule_folder, skip_nil: true
               end
       
           end
