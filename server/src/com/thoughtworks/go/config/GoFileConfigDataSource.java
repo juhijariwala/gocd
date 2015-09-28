@@ -226,7 +226,7 @@ public class GoFileConfigDataSource {
             MagicalGoConfigXmlLoader.preprocess(preprocessedConfig);
             return new CachedFileGoConfig.PipelineConfigSaveResult(pipelineConfig, pipelineGroup, new GoConfigHolder(preprocessedConfig, modifiedConfig));
         } catch (Exception e) {
-            throw new RuntimeException("failed to save" + e.getMessage());
+            throw new RuntimeException("failed to save : " + e.getMessage());
         }
     }
 

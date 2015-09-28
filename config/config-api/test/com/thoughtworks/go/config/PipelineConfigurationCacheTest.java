@@ -137,8 +137,8 @@ public class PipelineConfigurationCacheTest {
         configCache.onConfigChange(cruiseConfig);
 
         assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p1")).getDependencies().isEmpty(), is(true));
-        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p2")).getDependencies(), contains(new CaseInsensitiveString("p1")));
-        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p3")).getDependencies(), contains(new CaseInsensitiveString("p2")));
+        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p2")).getDependencies(), contains(new Node.DependencyNode(new CaseInsensitiveString("p1"),new CaseInsensitiveString("stage"))));
+        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p3")).getDependencies(), contains(new Node.DependencyNode(new CaseInsensitiveString("p2"),new CaseInsensitiveString("stage"))));
         assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("junk")).getDependencies().isEmpty(), is(true));
     }
 
@@ -155,8 +155,8 @@ public class PipelineConfigurationCacheTest {
         configCache.onPipelineConfigChange(p3, "grp");
 
         assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p1")).getDependencies().isEmpty(), is(true));
-        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p2")).getDependencies(), contains(new CaseInsensitiveString("p1")));
-        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p3")).getDependencies(), contains(new CaseInsensitiveString("p2"), new CaseInsensitiveString("p1")));
+        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p2")).getDependencies(), contains(new Node.DependencyNode(new CaseInsensitiveString("p1"),new CaseInsensitiveString("stage") )));
+        assertThat(configCache.getDependencyMaterialsFor(new CaseInsensitiveString("p3")).getDependencies(), contains(new Node.DependencyNode(new CaseInsensitiveString("p2"),new CaseInsensitiveString("stage") ), new Node.DependencyNode(new CaseInsensitiveString("p1"),new CaseInsensitiveString("stage") )));
     }
 
     @Test
@@ -172,8 +172,8 @@ public class PipelineConfigurationCacheTest {
         p3.addMaterialConfig(new DependencyMaterialConfig(p1.name(), p1.first().name()));
         configCache.onPipelineConfigChange(p3, "grp");
         assertThat(configCache.getDependencyMaterialsFor(p1.name()).getDependencies().isEmpty(), is(true));
-        assertThat(configCache.getDependencyMaterialsFor(p2.name()).getDependencies(), contains(p1.name()));
-        assertThat(configCache.getDependencyMaterialsFor(p3.name()).getDependencies(), contains(p2.name(), p1.name()));
+        assertThat(configCache.getDependencyMaterialsFor(p2.name()).getDependencies(), contains(new Node.DependencyNode(p1.name(), p1.first().name())));
+        assertThat(configCache.getDependencyMaterialsFor(p3.name()).getDependencies(), contains(new Node.DependencyNode(p2.name(), p2.first().name()), new Node.DependencyNode(p1.name(), p1.first().name())));
     }
 
     @Test

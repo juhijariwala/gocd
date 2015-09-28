@@ -148,62 +148,7 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
     }
 
     public boolean validateTree(PipelineConfigSaveValidationContext validationContext) {
-        validate(validationContext);
-        if (isEmpty() && !hasTemplate()) {
-            addError("stages", "A pipeline must have at least one stage");
-        }
-        if (!isEmpty() && hasTemplate()) {
-            addError("stages", String.format("Cannot add stages to pipeline '%s' which already references template '%s'", name, templateName));
-            addError("template", String.format("Cannot set template '%s' on pipeline '%s' because it already has stages defined", templateName, name));
-        }
-        boolean isValid = this.errors().isEmpty();
-        if(hasTemplate() && !validationContext.doesTemplateExist(templateName)){
-            addError("template", String.format("Template '%s' does not exist", templateName));
-        }
-        PipelineConfigSaveValidationContext contextForChildren = validationContext.withParent(this);
-
-        for (StageConfig stageConfig : getStages()) {
-            isValid = stageConfig.validateTree(contextForChildren) && isValid;
-        }
-        validateCyclicDependencies(validationContext);
-        isValid = materialConfigs.validateTree(contextForChildren) && isValid;
-        isValid = params.validateTree(contextForChildren) && isValid;
-        isValid = variables.validateTree(contextForChildren) && isValid;
-        if (trackingTool != null) isValid = trackingTool.validateTree(contextForChildren) && isValid;
-        if (mingleConfig != null) isValid = mingleConfig.validateTree(contextForChildren) && isValid;
-        if (timer != null) isValid = timer.validateTree(contextForChildren) && isValid;
-        return isValid;
-    }
-
-    public void validateCyclicDependencies(PipelineConfigSaveValidationContext validationContext) {
-        final DFSCycleDetector dfsCycleDetector = new DFSCycleDetector();
-        try {
-            dfsCycleDetector.topoSort(name(), new PipelineConfigValidationContextDependencyState(this, validationContext));
-        } catch (Exception e) {
-            materialConfigs.addError("base", e.getMessage());
-        }
-    }
-
-    private class PipelineConfigValidationContextDependencyState implements PipelineDependencyState {
-        private PipelineConfig pipelineConfig;
-        private PipelineConfigSaveValidationContext validationContext;
-
-        public PipelineConfigValidationContextDependencyState(PipelineConfig pipelineConfig, PipelineConfigSaveValidationContext validationContext) {
-            this.pipelineConfig = pipelineConfig;
-            this.validationContext = validationContext;
-        }
-
-        @Override
-        public boolean hasPipeline(CaseInsensitiveString key) {
-            return validationContext.getPipelineConfigByName(key) != null;
-        }
-
-        @Override
-        public Node getDependencyMaterials(CaseInsensitiveString pipelineName) {
-            if(pipelineConfig.name().equals(pipelineName))
-                return pipelineConfig.getDependenciesAsNode();
-            return validationContext.getDependencyMaterialsFor(pipelineName);
-        }
+        return new PipelineConfigTreeValidator(this).validate(validationContext);
     }
 
     public void validate(ValidationContext validationContext) {
@@ -394,10 +339,11 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
     }
 
     public Node getDependenciesAsNode() {
-        List<CaseInsensitiveString> pipelineDeps = new ArrayList<CaseInsensitiveString>();
+        List<Node.DependencyNode> pipelineDeps = new ArrayList<>();
         for (MaterialConfig material : materialConfigs) {
             if (material instanceof DependencyMaterialConfig) {
-                pipelineDeps.add(((DependencyMaterialConfig) material).getPipelineName());
+                DependencyMaterialConfig dependencyMaterialConfig = (DependencyMaterialConfig) material;
+                pipelineDeps.add(new Node.DependencyNode(dependencyMaterialConfig.getPipelineName(), dependencyMaterialConfig.getStageName()));
             }
         }
         return new Node(pipelineDeps);

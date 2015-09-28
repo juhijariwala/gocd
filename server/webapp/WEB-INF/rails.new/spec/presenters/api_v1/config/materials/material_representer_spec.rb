@@ -24,6 +24,12 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
       expect(actual_json).to eq(git_material_hash)
     end
 
+    it "should serialize material without name" do
+      presenter = ApiV1::Config::Materials::MaterialRepresenter.prepare(GitMaterialConfig.new("http://user:password@funk.com/blank"))
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+      expect(actual_json).to eq(git_material_basic_hash)
+    end
+
     it "should deserialize" do
       presenter = ApiV1::Config::Materials::MaterialRepresenter.new(GitMaterialConfig.new)
       deserialized_object = presenter.from_hash(git_material_hash)
@@ -32,6 +38,24 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
       expect(deserialized_object.name).to eq(expected.name)
       expect(deserialized_object).to eq(expected)
     end
+
+    it "should deserialize material without name" do
+      presenter = ApiV1::Config::Materials::MaterialRepresenter.new(GitMaterialConfig.new)
+      deserialized_object = presenter.from_hash({
+          type:       GitMaterialConfig::TYPE,
+          attributes: {
+          url:              "http://user:password@funk.com/blank",
+          branch:           "master",
+          auto_update:      true,
+          name:             nil
+         }
+        })
+      expected = GitMaterialConfig.new("http://user:password@funk.com/blank")
+      expect(deserialized_object.autoUpdate).to eq(expected.autoUpdate)
+      expect(deserialized_object.name).to eq(nil)
+      expect(deserialized_object).to eq(expected)
+    end
+
   end
 
   describe :svn do
@@ -274,6 +298,17 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
         submodule_folder: "sub_module_folder",
         name:             "AwesomeGitMaterial",
         auto_update:      false
+      }
+    }
+  end
+
+  def git_material_basic_hash
+    {
+      type:       GitMaterialConfig::TYPE,
+      attributes: {
+        url:              "http://user:password@funk.com/blank",
+        branch:           "master",
+        auto_update:      true
       }
     }
   end

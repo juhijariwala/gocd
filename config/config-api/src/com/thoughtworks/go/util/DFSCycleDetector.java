@@ -42,13 +42,13 @@ public class DFSCycleDetector {
         // Make sure we exist
         validateRootExists(root, pipelineDependencyState, visiting);
         Node stage = pipelineDependencyState.getDependencyMaterials(root);
-        for (CaseInsensitiveString cur : stage.getDependencies()) {
-            if (!state.containsKey(cur)) {
+        for (Node.DependencyNode cur : stage.getDependencies()) {
+            if (!state.containsKey(cur.getPipelineName())) {
                 // Not been visited
-                tsort(cur, pipelineDependencyState, state, visiting);
-            } else if (state.get(cur) == CycleState.VISITING) {
+                tsort(cur.getPipelineName(), pipelineDependencyState, state, visiting);
+            } else if (state.get(cur.getPipelineName()) == CycleState.VISITING) {
                 // Currently visiting this node, so have a cycle
-                throwCircularException(cur, visiting);
+                throwCircularException(cur.getPipelineName(), visiting);
             }
         }
         popAndAssertTopIsConsistent(visiting, root);

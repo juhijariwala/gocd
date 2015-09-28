@@ -19,14 +19,12 @@ package com.thoughtworks.go.config.materials;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.StageConfig;
-import com.thoughtworks.go.config.ValidationContext;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig;
 import com.thoughtworks.go.config.materials.mercurial.HgMaterialConfig;
 import com.thoughtworks.go.domain.BaseCollection;
 import com.thoughtworks.go.domain.materials.MaterialConfig;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.not;
@@ -125,6 +123,20 @@ public class AbstractMaterialConfigTest {
         verify(dependency).getName();
         verify(aPackage).getName();
         verify(aPluggableSCM).getName();
+    }
+
+    @Test
+    public void shouldHandleBlankMaterialName(){
+        TestMaterialConfig materialConfig = new TestMaterialConfig("");
+        materialConfig.setName(null);
+        materialConfig.validate(PipelineConfigSaveValidationContext.forChain(new PipelineConfig()));
+        assertThat(materialConfig.errors().getAllOn(AbstractMaterialConfig.MATERIAL_NAME), is(Matchers.nullValue()));
+        materialConfig.setName(new CaseInsensitiveString(null));
+        materialConfig.validate(PipelineConfigSaveValidationContext.forChain(new PipelineConfig()));
+        assertThat(materialConfig.errors().getAllOn(AbstractMaterialConfig.MATERIAL_NAME), is(Matchers.nullValue()));
+        materialConfig.setName(new CaseInsensitiveString(""));
+        materialConfig.validate(PipelineConfigSaveValidationContext.forChain(new PipelineConfig()));
+        assertThat(materialConfig.errors().getAllOn(AbstractMaterialConfig.MATERIAL_NAME), is(Matchers.nullValue()));
     }
 
     private Map<String, String> m(String key, String value) {

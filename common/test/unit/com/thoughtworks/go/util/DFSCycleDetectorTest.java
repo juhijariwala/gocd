@@ -41,9 +41,9 @@ public class DFSCycleDetectorTest {
 
     @Test
     public void shouldThrowExceptionWhenCycleDependencyFound() throws Exception {
-        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new CaseInsensitiveString("b")));
-        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new CaseInsensitiveString("c")));
-        when(state.getDependencyMaterials(new CaseInsensitiveString("c"))).thenReturn(new Node(new CaseInsensitiveString("a")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("b"), new CaseInsensitiveString("stage"))));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("c"), new CaseInsensitiveString("stage"))));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("c"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("a"), new CaseInsensitiveString("stage"))));
         when(state.hasPipeline(new CaseInsensitiveString("a"))).thenReturn(true);
         when(state.hasPipeline(new CaseInsensitiveString("b"))).thenReturn(true);
         when(state.hasPipeline(new CaseInsensitiveString("c"))).thenReturn(true);
@@ -57,9 +57,10 @@ public class DFSCycleDetectorTest {
 
     @Test
     public void shouldNotThrowExceptionWhenCycleDependencyNotFound() throws Exception {
-        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new CaseInsensitiveString("b")));
-        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new CaseInsensitiveString("c")));
-        when(state.getDependencyMaterials(new CaseInsensitiveString("c"))).thenReturn(new Node(new ArrayList<CaseInsensitiveString>()));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("b"), new CaseInsensitiveString("stage"))));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("c"), new CaseInsensitiveString("stage"))));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("c"))).thenReturn(new Node(new ArrayList<Node.DependencyNode>()));
+
         when(state.hasPipeline(new CaseInsensitiveString("a"))).thenReturn(true);
         when(state.hasPipeline(new CaseInsensitiveString("b"))).thenReturn(true);
         when(state.hasPipeline(new CaseInsensitiveString("c"))).thenReturn(true);
@@ -67,8 +68,8 @@ public class DFSCycleDetectorTest {
     }
 
     @Test public void shouldThrowExceptionWhenDependencyExistsWithUnknownPipeline() throws Exception {
-        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new CaseInsensitiveString("b")));
-        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new CaseInsensitiveString("z")));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("a"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("b"), new CaseInsensitiveString("stage"))));
+        when(state.getDependencyMaterials(new CaseInsensitiveString("b"))).thenReturn(new Node(new Node.DependencyNode(new CaseInsensitiveString("z"), new CaseInsensitiveString("stage"))));
         when(state.hasPipeline(new CaseInsensitiveString("a"))).thenReturn(true);
         when(state.hasPipeline(new CaseInsensitiveString("b"))).thenReturn(true);
         when(state.hasPipeline(new CaseInsensitiveString("z"))).thenReturn(false);
