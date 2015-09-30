@@ -18,93 +18,68 @@ module ApiV1
   class Config::JobRepresenter < ApiV1::BaseRepresenter
     alias_method :job, :represented
 
-    property :name, exec_context: :decorator
-    property :run_on_all_agents, exec_context: :decorator
-    property :run_instance_count
-    property :timeout
-    collection :environment_variables, exec_context: :decorator, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig
-    collection :resources, exec_context: :decorator, render_empty: false
-    collection :tasks, exec_context: :decorator, decorator: ApiV1::Config::Tasks::TaskRepresenter,
-               skip_parse: lambda{|fragment, options|
-                 !fragment.respond_to?(:has_key?)|| fragment.empty?
-               },
-            class: lambda { |object, *|
-                case object[:type] || object['type']
-                  when "pluggable_task"
-                    PluggableTask
-                  when ExecTask::TYPE
-                    ExecTask
-                  when AntTask::TYPE
-                    AntTask
-                  when NantTask::TYPE
-                    NantTask
-                  when RakeTask::TYPE
-                    RakeTask
-                  when FetchTask::TYPE
-                    FetchTask
-                  else
-                    raise UnprocessableEntity, "Invalid Task type: #{object['type']||object[:type]}. It can be one of '{pluggable_task, exec, Ant, nant, rake, fetch}'"
-                end
-            }
-
-    collection :tabs, exec_context: :decorator, decorator: TabConfigRepresenter, class: com.thoughtworks.go.config.Tab, render_empty: false
-    collection :artifacts, exec_context: :decorator, decorator: ApiV1::Config::ArtifactRepresenter, render_empty: false,
-               skip_parse: lambda{|fragment,options|
-                 !fragment.respond_to?(:has_key?)|| fragment.empty?
-               },
-                class: lambda { |object, *|
-                  case object['type'] || object[:type]
-                    when "build"
-                      com.thoughtworks.go.config.ArtifactPlan
-                    when "test"
-                      com.thoughtworks.go.config.TestArtifactPlan
-                    else
-                      raise UnprocessableEntity, "Invalid Artifact type: #{object['type']||object[:type]}. It can be one of '{build, test}'"
-                  end
-                }
+    property :name,
+             case_insensitive_string: true
+    property :run_on_all_agents
+    property :run_instance_count,
+             getter: lambda { |options| run_instance_count.to_i },
+             setter: lambda { |val, options| self.run_instance_count = val.to_s }
+    property :timeout,
+             getter: lambda { |options| timeout.to_i },
+             setter: lambda { |val, options| self.timeout = val.to_s }
+    collection :environment_variables,
+               exec_context: :decorator,
+               decorator:    ApiV1::Config::EnvironmentVariableRepresenter,
+               class:        com.thoughtworks.go.config.EnvironmentVariableConfig
+    collection :resources,
+               exec_context: :decorator
+    collection :tasks,
+               exec_context: :decorator,
+               decorator:    ApiV1::Config::Tasks::TaskRepresenter,
+               expect_hash:  true,
+               class:        lambda { |fragment, *|
+                 ApiV1::Config::Tasks::TaskRepresenter.task_class_for_type(fragment[:type])
+               }
+    collection :tabs,
+               exec_context: :decorator,
+               decorator:    TabConfigRepresenter,
+               expect_hash:  true,
+               class:        com.thoughtworks.go.config.Tab
+    collection :artifacts,
+               exec_context: :decorator,
+               decorator:    ApiV1::Config::ArtifactRepresenter,
+               expect_hash:  true,
+               class:        lambda { |fragment, *|
+                 ApiV1::Config::ArtifactRepresenter.get_class_for_artifact_type(fragment[:type])
+               }
 
     collection :properties, exec_context: :decorator, decorator: ApiV1::Config::PropertyConfigRepresenter, class: com.thoughtworks.go.config.ArtifactPropertiesGenerator, render_empty: false
     property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
-    def name
-      job.name().to_s
-    end
-
-    def name=(value)
-      job.setName(value)
-    end
-
-    def run_on_all_agents
-      job.isRunOnAllAgents()
-    end
-
-    def run_on_all_agents=(value)
-      job.setRunOnAllAgents(value)
-    end
+    delegate :run_on_all_agents, :run_on_all_agents=, to: :job
 
     def artifacts
-      job.artifactPlans()
+      job.artifactPlans
     end
 
     def artifacts=(value)
-      artifact_plans=ArtifactPlans.new()
-      value.each {|artifact| artifact_plans.add(artifact)}
-      job.setArtifactPlans(artifact_plans)
+      job.setArtifactPlans(com.thoughtworks.go.config.ArtifactPlans.new(value))
     end
 
     def environment_variables
-      job.getVariables()
+      job.getVariables
     end
+
     def environment_variables=(array_of_variables)
       job.setVariables(EnvironmentVariablesConfig.new(array_of_variables))
     end
 
     def resources
-      job.resources().map { |resource| resource.getName() }
+      job.resources.collect(&:name)
     end
 
-    def resources=(value)
-      value.each {|resource| job.resources.add(com.thoughtworks.go.config.Resource.new(resource))}
+    def resources=(values)
+      job.setResources(com.thoughtworks.go.config.Resources.new(values.map { |name| com.thoughtworks.go.config.Resource.new(name) }))
     end
 
     def tasks
@@ -112,7 +87,7 @@ module ApiV1
     end
 
     def tasks=(value)
-      job.setTasks(com.thoughtworks.go.config.Tasks.new(value.to_java(Task)))
+      job.setTasks(com.thoughtworks.go.config.Tasks.new(value.to_java(com.thoughtworks.go.domain.Task)))
     end
 
     def tabs
@@ -128,7 +103,7 @@ module ApiV1
     end
 
     def properties=(value)
-      job.setProperties(com.thoughtworks.go.config.ArtifactPropertiesGenerators.new(value.to_java(com.thoughtworks.go.config.ArtifactPropertiesGenerator)))
+      job.setProperties(com.thoughtworks.go.config.ArtifactPropertiesGenerators.new(value))
     end
   end
 end

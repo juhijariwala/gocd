@@ -18,31 +18,47 @@ module ApiV1
   module Config
     module Materials
       class MaterialRepresenter < ApiV1::BaseRepresenter
+        MATERIAL_TYPE_MAP = [GitMaterialConfig,
+                             SvnMaterialConfig,
+                             HgMaterialConfig,
+                             P4MaterialConfig,
+                             TfsMaterialConfig,
+                             DependencyMaterialConfig,
+                             PackageMaterialConfig,
+                             PluggableSCMMaterialConfig
+        ].inject({}) do |memo, material_type|
+          memo[material_type.const_get(:TYPE)] = material_type
+          memo
+        end
+
+        MATERIAL_TYPE_TO_REPRESENTER_MAP= {
+          'com.thoughtworks.go.config.materials.git.GitMaterialConfig'               => GitMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.svn.SvnMaterialConfig'               => SvnMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.mercurial.HgMaterialConfig'          => HgMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.perforce.P4MaterialConfig'           => PerforceMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.tfs.TfsMaterialConfig'               => TfsMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig' => DependencyMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.PackageMaterialConfig'               => PackageMaterialRepresenter,
+          'com.thoughtworks.go.config.materials.PluggableSCMMaterialConfig'          => PluggableScmMaterialRepresenter
+        }
         alias_method :material_config, :represented
 
         property :getType, as: :type, skip_parse: true
         nested :attributes,
-                 decorator: lambda { |material_config, *|
-                   case material_config.getClass.getName
-                     when 'com.thoughtworks.go.config.materials.git.GitMaterialConfig'
-                       GitMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.svn.SvnMaterialConfig'
-                       SvnMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.mercurial.HgMaterialConfig'
-                       HgMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.perforce.P4MaterialConfig'
-                       PerforceMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.tfs.TfsMaterialConfig'
-                       TfsMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig'
-                       DependencyMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.PackageMaterialConfig'
-                       PackageMaterialRepresenter
-                     when 'com.thoughtworks.go.config.materials.PluggableSCMMaterialConfig'
-                       PluggableScmMaterialRepresenter
-                   end
-                 }
+               decorator: lambda { |material_config, *|
+                 MATERIAL_TYPE_TO_REPRESENTER_MAP[material_config.getClass.getName]
+               }
         property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
+
+        class << self
+          def get_material_type(type)
+            if klass = MATERIAL_TYPE_MAP[type]
+              klass
+            else
+              raise UnprocessableEntity, "Invalid material type '#{type}'. It has to be one of '#{MATERIAL_TYPE_MAP.keys.join(' ')}'"
+            end
+          end
+        end
 
       end
     end

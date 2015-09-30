@@ -18,20 +18,12 @@ module ApiV1
   module Config
     module Tasks
       class NantTaskRepresenter < ApiV1::Config::Tasks::BaseTaskRepresenter
-        alias_method :nant_task, :represented
+        alias_method :task, :represented
 
-        property :working_dir,exec_context: :decorator
+        property :working_directory
         property :build_file
         property :target
         property :nant_path
-
-        def working_dir
-          nant_task.workingDirectory()
-        end
-
-        def working_dir=(value)
-          nant_task.setWorkingDirectory(value)
-        end
       end
     end
   end

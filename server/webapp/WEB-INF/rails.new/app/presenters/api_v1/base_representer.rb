@@ -20,16 +20,40 @@ require 'roar/json/hal'
 
 module ApiV1
   class BaseRepresenter < Roar::Decorator
+    include Representable::Hash
+    include Representable::Hash::AllowSymbols
+
     include Roar::JSON::HAL
     include JavaImports
 
     class <<self
       def property(name, options={})
-        if (options[:skip_nil])
-          super
-        else
-          super(name, options.merge!(render_nil: true))
+        if options[:case_insensitive_string]
+          options.merge!({
+                           getter: lambda { |options|
+                             self.send(name).to_s if self.send(name)
+                           },
+                           setter: lambda { |value, options|
+                             self.send(:"#{name}=", CaseInsensitiveString.new(value)) if value
+                           }
+                         })
         end
+
+        if options[:expect_hash]
+          options[:skip_parse] = lambda { |fragment, options|
+            if fragment.respond_to?(:has_key?)
+              false
+            else
+              raise ApiV1::UnprocessableEntity, "Expected #{name} to contain an object, got a #{fragment.class} instead!"
+            end
+          }
+        end
+
+        unless (options[:skip_nil])
+          options.merge!(render_nil: true)
+        end
+
+        super(name, options)
       end
     end
 
@@ -38,7 +62,7 @@ module ApiV1
     end
 
     def from_hash(hash, options={})
-      super(hash.deep_stringify_keys, options) if hash
+      super(hash.deep_symbolize_keys, options) if hash
     end
   end
 end

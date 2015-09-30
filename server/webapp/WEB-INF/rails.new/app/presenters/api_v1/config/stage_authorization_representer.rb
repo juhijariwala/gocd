@@ -18,23 +18,10 @@ module ApiV1
   class Config::StageAuthorizationRepresenter < ApiV1::BaseRepresenter
     alias_method :authorization, :represented
 
-    collection :roles, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String, skip_nil: true, render_empty: false
-    collection :users, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String, skip_nil: true, render_empty: false
-
-    def roles
-      authorization.getRoles().map { |role| role.getName().to_s }
-    end
-
-    def roles= value
-      value.each { |role| authorization.add(AdminRole.new(CaseInsensitiveString.new(role))) }
-    end
-
-    def users
-      authorization.getUsers().map { |role| role.getName().to_s }
-    end
-
-    def users=(value)
-      value.each { |user| authorization.add(AdminUser.new(CaseInsensitiveString.new(user))) }
-    end
+    collection :roles,
+               getter: lambda { |roles| roles().map { |role| role.getName().to_s } },
+               setter: lambda { |val, options|  val.map { |role| self.add(com.thoughtworks.go.config.AdminRole.new(CaseInsensitiveString.new(role))) } }
+    collection :users,getter: lambda { |users| users().map { |user| user.getName().to_s } },
+               setter: lambda { |val, options| val.each { |user| self.add(com.thoughtworks.go.config.AdminUser.new(CaseInsensitiveString.new(user))) } }
   end
 end

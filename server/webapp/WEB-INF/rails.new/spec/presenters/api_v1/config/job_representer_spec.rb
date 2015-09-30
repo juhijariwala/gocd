@@ -17,64 +17,184 @@
 require 'spec_helper'
 
 describe ApiV1::Config::JobRepresenter do
-  it 'should render stage with hal representation' do
-    presenter = ApiV1::Config::JobRepresenter.new(get_job_config)
-    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
-    expect(actual_json).to eq(job_hash)
+  describe :serialize do
+    it 'should render job with hal representation' do
+      job_config = JobConfig.new
+
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash(job_hash)
+      expected = com.thoughtworks.go.helper.JobConfigMother.jobConfig()
+      expect(job_config).to eq(expected)
+    end
+
+    def job_hash
+      {
+        name:                  'defaultJob',
+        run_on_all_agents:     false,
+        run_instance_count:    3,
+        timeout:               100,
+        environment_variables: [
+                                 {secure: true, name: 'MULTIPLE_LINES', encrypted_value: com.thoughtworks.go.helper.JobConfigMother.jobConfig().variables.get(0).getEncryptedValue},
+                                 {secure: false, name: 'COMPLEX', value: 'This has very <complex> data'}
+                               ],
+        resources: %w(Linux Java),
+        tasks:                 [
+                                 {type: 'ant', attributes: {working_directory: 'working-directory', build_file: 'build-file', target: 'target'}}
+                               ],
+        tabs:                  [
+                                 {name: 'coverage', path: 'Jcoverage/index.html'},
+                                 {name: 'something', path: 'something/path.html'}
+                               ],
+        artifacts:             [
+                                 {source: 'target/dist.jar', destination: 'pkg', type: 'build'},
+                                 {source: nil, destination: 'testoutput', type: 'test'}
+                               ],
+
+        properties:            [{name: 'coverage.class', source: 'target/emma/coverage.xml', xpath: "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')"}]
+      }
+    end
   end
 
-  it "should convert from document to JobConfig" do
-    job_config = JobConfig.new
+  describe :deserialize do
+    it 'should convert basic hash to Job' do
+      job_config = JobConfig.new
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({
+                                                                name:               'some-job',
+                                                                run_on_all_agents:  true,
+                                                                run_instance_count: '3',
+                                                                timeout:            '100',
+                                                              })
+      expect(job_config.name.to_s).to eq('some-job')
+      expect(job_config.is_run_on_all_agents).to eq(true)
+      expect(job_config.run_instance_count).to eq("3")
+      expect(job_config.timeout).to eq("100")
+    end
 
-    ApiV1::Config::JobRepresenter.new(job_config).from_hash(job_hash)
-    expected = get_job_config
-    expect(job_config).to eq(expected)
-    expect(job_config.tasks).to eq(expected.tasks)
-    expect(job_config.artifactPlans).to eq(expected.artifactPlans)
-    expect(job_config.artifactPlans.first.instance_of? ArtifactPlan).to eq(true)
-    expect(job_config.artifactPlans.last.instance_of? TestArtifactPlan).to eq(true)
+    it 'should convert basic hash with environment variable to Job' do
+      job_config            = JobConfig.new
+      environment_variables = [
+        {
+          name:   'USERNAME',
+          value:  'bob',
+          secure: true
+        },
+        {
+          name:   'API_KEY',
+          value:  'tOps3cret',
+          secure: false
+        }
+      ]
+
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({environment_variables: environment_variables})
+      expect(job_config.variables.map(&:name)).to eq(%w(USERNAME API_KEY))
+    end
+
+    it 'should convert basic hash with resources to Job' do
+      job_config = JobConfig.new
+
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({resources: %w(java linux)})
+      expect(job_config.resources.map(&:name)).to eq(%w(java linux))
+    end
+    it 'should convert basic hash with task to Job' do
+      job_config = JobConfig.new
+      task_hash  = {type: 'ant', attributes: {working_directory: 'working-directory', build_file: 'build-file', target: 'target'}}
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({tasks: [task_hash]})
+      expect(job_config.tasks.size).to eq(1)
+      expect(job_config.tasks.first.getTaskType).to eq('ant')
+      expect(job_config.tasks.first.getBuildFile).to eq('build-file')
+    end
+
+    it 'should  raise exception when invalid task type is passed' do
+      expect do
+        job_config = JobConfig.new
+        ApiV1::Config::JobRepresenter.new(job_config).from_hash({tasks: [{type: 'invalid'}]})
+      end.to raise_error(ApiV1::UnprocessableEntity, /Invalid task type 'invalid'. It has to be one of /)
+    end
+
+    it 'should convert basic hash with tabs to Job' do
+      job_config = JobConfig.new
+      tab_hash   = [
+        {
+          name: 'coverage', path: 'Jcoverage/index.html'},
+        {name: 'something', path: 'something/path.html'}
+      ]
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({tabs: tab_hash})
+      expect(job_config.getTabs.map(&:name)).to eq(%w(coverage something))
+    end
+
+    it 'should convert basic hash with artifact to Job' do
+      job_config = JobConfig.new
+      artifacts  = [
+        {source: 'target/dist.jar', destination: 'pkg', type: 'build'},
+        {source: nil, destination: 'testoutput', type: 'test'}
+      ]
+
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({artifacts: artifacts})
+      expect(job_config.artifactPlans.map(&:dest)).to eq(%w(pkg testoutput))
+      expect(job_config.artifactPlans.map(&:getArtifactType).map(&:to_s)).to eq(%w(file unit))
+    end
+
+    it 'should raise exception when invalid artifact type is passed' do
+      expect do
+        job_config = JobConfig.new
+        ApiV1::Config::JobRepresenter.new(job_config).from_hash({artifacts: [{type: 'invalid'}]})
+      end.to raise_error(ApiV1::UnprocessableEntity, /Invalid Artifact type: 'invalid'. It has to be one of/)
+    end
+
+    it 'should convert basic hash with properties to Job' do
+      job_config = JobConfig.new
+      properties = [
+        {
+          name:   'coverage.class',
+          source: 'target/emma/coverage.xml',
+          xpath:  "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')"
+        }
+      ]
+
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({properties: properties})
+      expect(job_config.getProperties.map(&:name)).to eq(['coverage.class'])
+    end
+
   end
 
-  it "should map errors" do
+  it 'should map errors' do
     job_config = JobConfig.new
-    plans = ArtifactPlans.new
-    plans.add(ArtifactPlan.new(com.thoughtworks.go.domain.ArtifactType::unit, nil, "../foo"))
+    plans      = ArtifactPlans.new
+    plans.add(ArtifactPlan.new(com.thoughtworks.go.domain.ArtifactType::unit, nil, '../foo'))
     job_config.setArtifactPlans(plans)
-    job_config.setTasks(com.thoughtworks.go.config.Tasks.new(FetchTask.new(CaseInsensitiveString.new(""),CaseInsensitiveString.new(""), CaseInsensitiveString.new(""),nil, nil )))
-    job_config.setTabs(com.thoughtworks.go.config.Tabs.new(com.thoughtworks.go.config.Tab.new("coverage#1", "/Jcoverage/index.html"), com.thoughtworks.go.config.Tab.new("coverage#1", "/Jcoverage/path.html")))
+    job_config.setTasks(com.thoughtworks.go.config.Tasks.new(FetchTask.new(CaseInsensitiveString.new(''), CaseInsensitiveString.new(''), CaseInsensitiveString.new(''), nil, nil)))
+    job_config.setTabs(com.thoughtworks.go.config.Tabs.new(com.thoughtworks.go.config.Tab.new('coverage#1', '/Jcoverage/index.html'), com.thoughtworks.go.config.Tab.new('coverage#1', '/Jcoverage/path.html')))
 
     job_config.validateTree(PipelineConfigSaveValidationContext.forChain(PipelineConfig.new, StageConfig.new, job_config))
-    presenter = ApiV1::Config::JobRepresenter.new(job_config)
+    presenter   = ApiV1::Config::JobRepresenter.new(job_config)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
-    expect(actual_json).to eq(job_hash_with_errors(job_config))
-
+    expect(actual_json).to eq(job_hash_with_errors)
   end
 
-  def job_hash_with_errors job
+  def job_hash_with_errors
     {
-      name:                  "",
+      name:                  nil,
       run_on_all_agents:     false,
-      run_instance_count:    nil,
-      timeout:               nil,
+      run_instance_count:    0,
+      timeout:               0,
       environment_variables: [],
-      resources:             nil,
+      resources:             [],
       tasks:                 [
                                {
-                                 type:       "fetch",
-                                 attributes: {pipeline: nil, stage: nil, job: nil, is_source_a_file: false, source: nil, destination: ""},
+                                 type:       'fetch',
+                                 attributes: {pipeline: nil, stage: nil, job: nil, is_source_a_file: false, source: nil, destination: ''},
                                  errors:     {
-                                   job:   ["Job is a required field."],
-                                   src:   ["Should provide either srcdir or srcfile"],
-                                   stage: ["Stage is a required field."]
+                                   job:   ['Job is a required field.'],
+                                   src:   ['Should provide either srcdir or srcfile'],
+                                   stage: ['Stage is a required field.']
                                  }
                                }
                              ],
       tabs:                  [
                                {
-                                 name:   "coverage#1",
-                                 path:   "/Jcoverage/index.html",
+                                 name:   'coverage#1',
+                                 path:   '/Jcoverage/index.html',
                                  errors: {
                                    name: ["Tab name 'coverage#1' is not unique.",
                                           "Tab name 'coverage#1' is invalid. This must be alphanumeric and can contain underscores and periods."
@@ -82,8 +202,8 @@ describe ApiV1::Config::JobRepresenter do
                                  }
                                },
                                {
-                                 name:   "coverage#1",
-                                 path:   "/Jcoverage/path.html",
+                                 name:   'coverage#1',
+                                 path:   '/Jcoverage/path.html',
                                  errors: {
                                    name: ["Tab name 'coverage#1' is not unique.",
                                           "Tab name 'coverage#1' is invalid. This must be alphanumeric and can contain underscores and periods."
@@ -94,72 +214,20 @@ describe ApiV1::Config::JobRepresenter do
       artifacts:             [
                                {
                                  source:      nil,
-                                 destination: "../foo",
-                                 type:        "test",
+                                 destination: '../foo',
+                                 type:        'test',
                                  errors:      {
-                                   destination: ["Invalid destination path. Destination path should match the pattern "+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN],
+                                   destination: ['Invalid destination path. Destination path should match the pattern '+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN],
                                    source:      ["Job 'null' has an artifact with an empty source"]
 
                                  }
                                }
                              ],
-      properties: nil,
+      properties:            nil,
       errors:                {
-        name: ["Name is a required field"]
+        name: ['Name is a required field']
       }
     }
   end
 
-  def get_job_config
-    com.thoughtworks.go.helper.JobConfigMother.jobConfig()
-  end
-
-  def job_hash
-    {
-      name: "defaultJob",
-      run_on_all_agents: false,
-      run_instance_count: "3",
-      timeout: "100",
-      environment_variables: [
-          {secure: true,name: "MULTIPLE_LINES", encrypted_value: get_job_config.variables.get(0).getEncryptedValue }, {secure: false,name: "COMPLEX", value: "This has very <complex> data" }
-      ],
-      resources: [
-        "Linux",
-        "Java"
-      ],
-      tasks: [
-          {type: "ant", attributes: {working_dir: "working-directory", build_file: "build-file", target: "target"}}
-      ],
-      tabs: [
-          {
-              name: "coverage",
-              path: "Jcoverage/index.html"
-          },
-          {
-              name: "something",
-              path: "something/path.html"
-          }
-      ],
-      artifacts: [
-        {
-          source: "target/dist.jar",
-          destination: "pkg",
-          type: "build"
-        },
-        {
-          source: nil,
-          destination: "testoutput",
-          type: "test"
-        }
-      ],
-
-      properties: [
-        {
-          name: "coverage.class",
-          source: "target/emma/coverage.xml",
-          xpath: "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')"
-        }
-      ]
-    }
-  end
 end

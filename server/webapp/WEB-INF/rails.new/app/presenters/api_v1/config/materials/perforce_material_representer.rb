@@ -15,41 +15,24 @@
 ##########################################################################
 
 module ApiV1
-    module Config
-        module Materials
-      
-            class PerforceMaterialRepresenter < ScmMaterialRepresenter
-                alias_method :material_config, :represented
-        
-                property :url, exec_context: :decorator
-                property :server_and_port, as: :port
-                property :user_name, as: :username
-                property :password, skip_nil: true, exec_context: :decorator
-                property :encrypted_password, skip_nil: true, exec_context: :decorator
-                property :use_tickets
-                property :view
-        
-                def password
-                  end
-        
-                def password=(value)
-                    material_config.setPassword(value)
-                  end
-        
-                def encrypted_password
-                    material_config.getEncryptedPassword()
-                  end
-        
-                def encrypted_password=(value)
-                    material_config.setEncryptedPassword(value)
-                  end
-        
-                def url
-                    nil
-                  end
-        
-              end
-      
-          end
+  module Config
+    module Materials
+
+      class PerforceMaterialRepresenter < ScmMaterialRepresenter
+        alias_method :material_config, :represented
+
+        property :url,skip_render: true
+        property :server_and_port, as: :port
+        property :user_name, as: :username
+        property :password,
+                 skip_render: true,
+                 setter:      lambda { |value, options|
+                   self.setPassword(value)
+                 }
+        property :encrypted_password, skip_nil: true
+        property :use_tickets
+        property :view
       end
+    end
   end
+end

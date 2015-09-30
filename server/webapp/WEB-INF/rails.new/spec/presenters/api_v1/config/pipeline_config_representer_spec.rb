@@ -16,12 +16,6 @@
 
 require 'spec_helper'
 
-def pipeline_with_template
-  pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "${COUNT}", nil, true, MaterialConfigsMother.defaultMaterialConfigs(), ArrayList.new)
-  pipeline_config.setTemplateName(CaseInsensitiveString.new("template1"))
-  pipeline_config
-end
-
 describe ApiV1::Config::PipelineConfigRepresenter do
   it 'renders a pipeline with hal representation' do
     presenter   = ApiV1::Config::PipelineConfigRepresenter.new(get_pipeline_config)
@@ -37,8 +31,8 @@ describe ApiV1::Config::PipelineConfigRepresenter do
 
   it 'should serialize pipeline with template' do
     pipeline_config = pipeline_with_template
-    presenter = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
-    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+    presenter       = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
+    actual_json     = presenter.to_hash(url_builder: UrlBuilder.new)
 
     actual_json.delete(:_links)
     expect(actual_json).to eq(pipeline_with_template_hash)
@@ -61,7 +55,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
   end
 
   it "should render errors" do
-    pipeline_config  = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "", "", true, nil, ArrayList.new)
+    pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "", "", true, nil, ArrayList.new)
     pipeline_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain(pipeline_config))
 
     presenter   = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
@@ -71,7 +65,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
   end
 
   it "should render errors on nested objects" do
-    pipeline_config  = get_invalid_pipeline_config
+    pipeline_config = get_invalid_pipeline_config
     PipelineConfigurationCache::getInstance().onConfigChange(BasicCruiseConfig.new(BasicPipelineConfigs.new(get_pipeline_config)));
     pipeline_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain(pipeline_config))
 
@@ -81,79 +75,120 @@ describe ApiV1::Config::PipelineConfigRepresenter do
     expect(actual_json).to eq(expected_hash_with_nested_errors)
   end
 
+  it 'should raise exception when passing invalid material type' do
+    hash             = pipeline_hash_basic
+    hash[:materials] = [{type: 'bad-material-type', attributes: {foo: 'bar'}}]
+    pipeline_config  = PipelineConfig.new
+
+    expect do
+      ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(hash)
+    end.to raise_error(ApiV1::UnprocessableEntity, /Invalid material type 'bad-material-type'. It has to be one of/)
+  end
+
+  it 'should parse empty params' do
+    pipeline_config = PipelineConfig.new
+
+    ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(pipeline_hash_basic.tap do |hsh|
+                                                                              hsh[:params] = []
+                                                                            end)
+    expect(pipeline_config.getParams.isEmpty).to eq(true)
+  end
+
+  it 'should add environment variables' do
+    pipeline_config = PipelineConfig.new
+    hash            =pipeline_hash_basic.tap do |hsh|
+      hsh[:environment_variables] = [
+        {
+          name:   "var_name",
+          value:  "env_var",
+          secure: true
+        }
+      ]
+    end
+    ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(hash)
+    expect(pipeline_config.variables.get(0)).to eq(EnvironmentVariableConfig.new(GoCipher.new, "var_name", "env_var", true))
+  end
+
+
   def expected_hash_with_errors
     {
-        label_template:          "",
-        enable_pipeline_locking: false,
-        name:                    "wunderbar",
-        template: nil,
-        params: [],
-        environment_variables: [],
-        materials:               [],
-        stages:                  nil,
-        tracking_tool:           nil,
-        timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax"]}},
-        errors: {
-           materials: ["A pipeline must have at least one material"],
-           base:["Pipeline \"wunderbar\" does not exist."],
-           labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."],
-           stages: ["A pipeline must have at least one stage"]
-        }
+      label_template:          "",
+      enable_pipeline_locking: false,
+      name:                    CaseInsensitiveString.new("wunderbar"),
+      template:                nil,
+      params:                  [],
+      environment_variables:   [],
+      materials:               [],
+      stages:                  nil,
+      tracking_tool:           nil,
+      timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax"]}},
+      errors:                  {
+        materials:     ["A pipeline must have at least one material"],
+        base:          ["Pipeline \"wunderbar\" does not exist."],
+        labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."],
+        stages:        ["A pipeline must have at least one stage"]
+      }
     }
   end
 
   def expected_hash_with_nested_errors
     {
-        label_template:          "foo-1.0.${COUNT}-${svn}",
-        enable_pipeline_locking: false,
-        name:                    "wunderbar",
-        template: nil,
-        params: [
-          {
-              name: nil, value: "echo",
-              errors: {
-                name: [
-                  "Parameter cannot have an empty name for pipeline 'wunderbar'.",
-                  "Invalid parameter name 'null'. This must be alphanumeric and can contain underscores and periods (however, it cannot start with a period). The maximum allowed length is 255 characters."
-                ]
-              }
-          }
-        ],
-        environment_variables: [],
-        materials: [
-          {
-              type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
-          },
-          {
-              type: "GitMaterial", attributes: {url: nil, destination: nil, filter: nil, name: nil, auto_update: true, branch: "master", submodule_folder: nil},
-              errors: {folder: ["Destination directory is required when specifying multiple scm materials"], url: ["URL cannot be blank"]}
-          }
-        ],
-        stages:  [{name: "stage1", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}},environment_variables: [], jobs: []}],
-        timer: {spec: "0 0 22 ? * MON-FRI", only_on_changes: true},
-        tracking_tool: {
-          type: "external", attributes: {link: "", regex: ""},
-          errors: {
-            link: ["Link should be populated", "Link must be a URL containing '${ID}'. Go will replace the string '${ID}' with the first matched group from the regex at run-time."],
-            regex: ["Regex should be populated"]
-          }
-        },
+      label_template:          "foo-1.0.${COUNT}-${svn}",
+      enable_pipeline_locking: false,
+      name:                    CaseInsensitiveString.new("wunderbar"),
+      template:                nil,
+      params:                  [
+                                 {
+                                   name:   nil, value: "echo",
+                                   errors: {
+                                     name: [
+                                             "Parameter cannot have an empty name for pipeline 'wunderbar'.",
+                                             "Invalid parameter name 'null'. This must be alphanumeric and can contain underscores and periods (however, it cannot start with a period). The maximum allowed length is 255 characters."
+                                           ]
+                                   }
+                                 }
+                               ],
+      environment_variables:   [],
+      materials:               [
+                                 {
+                                   type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
+                                 },
+                                 {
+                                   type:   "GitMaterial", attributes: {url: nil, destination: nil, filter: nil, name: nil, auto_update: true, branch: "master", submodule_folder: nil},
+                                   errors: {folder: ["Destination directory is required when specifying multiple scm materials"], url: ["URL cannot be blank"]}
+                                 }
+                               ],
+      stages:                  [{name: "stage1", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}}, environment_variables: [], jobs: []}],
+      timer:                   {spec: "0 0 22 ? * MON-FRI", only_on_changes: true},
+      tracking_tool:           {
+        type:   "external", attributes: {link: "", regex: ""},
         errors: {
-           labelTemplate: ["You have defined a label template in pipeline wunderbar that refers to a material called svn, but no material with this name is defined."]
+          link:  ["Link should be populated", "Link must be a URL containing '${ID}'. Go will replace the string '${ID}' with the first matched group from the regex at run-time."],
+          regex: ["Regex should be populated"]
         }
+      },
+      errors:                  {
+        labelTemplate: ["You have defined a label template in pipeline wunderbar that refers to a material called svn, but no material with this name is defined."]
+      }
     }
   end
 
   def get_invalid_pipeline_config
     material_configs = MaterialConfigsMother.defaultMaterialConfigs()
-    git = GitMaterialConfig.new
+    git              = GitMaterialConfig.new
     git.setFolder(nil);
     material_configs.add(git);
 
-    pipeline_config  = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "foo-1.0.${COUNT}-${svn}", "0 0 22 ? * MON-FRI", true, material_configs, ArrayList.new)
+    pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "foo-1.0.${COUNT}-${svn}", "0 0 22 ? * MON-FRI", true, material_configs, ArrayList.new)
     pipeline_config.addParam(ParamConfig.new(nil, "echo"))
     pipeline_config.add(StageConfigMother.stageConfig("stage1"))
     pipeline_config.setTrackingTool(TrackingTool.new())
+    pipeline_config
+  end
+
+  def pipeline_with_template
+    pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "${COUNT}", nil, true, MaterialConfigsMother.defaultMaterialConfigs(), ArrayList.new)
+    pipeline_config.setTemplateName(CaseInsensitiveString.new("template1"))
     pipeline_config
   end
 
@@ -172,8 +207,8 @@ describe ApiV1::Config::PipelineConfigRepresenter do
     {
       label_template:          "foo-1.0.${COUNT}-${svn}",
       enable_pipeline_locking: false,
-      name:                    "wunderbar",
-      template: nil,
+      name:                    CaseInsensitiveString.new("wunderbar"),
+      template:                nil,
       params:                  get_pipeline_config.getParams().collect { |j| ApiV1::Config::ParamRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       environment_variables:   get_pipeline_config.variables().collect { |j| ApiV1::Config::EnvironmentVariableRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       materials:               get_pipeline_config.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
@@ -185,60 +220,60 @@ describe ApiV1::Config::PipelineConfigRepresenter do
 
   def pipeline_with_template_hash
     {
-      label_template: "${COUNT}",
+      label_template:          "${COUNT}",
       enable_pipeline_locking: false,
-      name:                    "wunderbar",
+      name:                    CaseInsensitiveString.new("wunderbar"),
       template:                "template1",
-      params: [],
-      environment_variables:[],
+      params:                  [],
+      environment_variables:   [],
       materials:               pipeline_with_template.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
-      stages: nil,
-      tracking_tool: nil,
-      timer: nil
+      stages:                  nil,
+      tracking_tool:           nil,
+      timer:                   nil
     }
   end
 
   def pipeline_hash_basic
-{
-    label_template: "foo-1.0.${COUNT}-${svn}",
-    enable_pipeline_locking: false,
-    name: "wunderbar",
-    materials: [
-        {
-            type: "SvnMaterial",
-            attributes: {
-                url: "http://some/svn/url",
-                destination: "svnDir",
-                check_externals: false
-            },
-            name: "http___some_svn_url",
-            auto_update: true
-        }
-    ],
-    stages: [
-        {
-            name: "stage1",
-            fetch_materials: true,
-            clean_working_directory: false,
-            never_cleanup_artifacts: false,
-            jobs: [
-                {
-                    name: "defaultJob",
-                    tasks: [
-                        {
-                            type: "ant",
-                            attributes: {
-                                working_dir: "working-directory",
-                                build_file: "build-file",
-                                target: "target"
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
-    ],
-}
+    {
+      label_template:          "foo-1.0.${COUNT}-${svn}",
+      enable_pipeline_locking: false,
+      name:                    CaseInsensitiveString.new("wunderbar"),
+      materials:               [
+                                 {
+                                   type:        "SvnMaterial",
+                                   attributes:  {
+                                     url:             "http://some/svn/url",
+                                     destination:     "svnDir",
+                                     check_externals: false
+                                   },
+                                   name:        "http___some_svn_url",
+                                   auto_update: true
+                                 }
+                               ],
+      stages:                  [
+                                 {
+                                   name:                    "stage1",
+                                   fetch_materials:         true,
+                                   clean_working_directory: false,
+                                   never_cleanup_artifacts: false,
+                                   jobs:                    [
+                                                              {
+                                                                name:  "defaultJob",
+                                                                tasks: [
+                                                                         {
+                                                                           type:       "ant",
+                                                                           attributes: {
+                                                                             working_dir: "working-directory",
+                                                                             build_file:  "build-file",
+                                                                             target:      "target"
+                                                                           }
+                                                                         }
+                                                                       ]
+                                                              }
+                                                            ]
+                                 }
+                               ],
+    }
   end
 
 

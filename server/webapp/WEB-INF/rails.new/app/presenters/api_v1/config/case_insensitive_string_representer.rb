@@ -18,7 +18,7 @@ module ApiV1
   class Config::CaseInsensitiveStringRepresenter < ApiV1::BaseRepresenter
     alias_method :case_insensitive_string, :represented
 
-    def from_hash name, options={}
+    def from_hash(name, options={})
       CaseInsensitiveString.new(name) unless name.to_s.strip.empty?
     end
 

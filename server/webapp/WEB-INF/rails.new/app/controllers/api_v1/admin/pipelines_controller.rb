@@ -30,27 +30,32 @@ module ApiV1
 
       def update
         result = HttpLocalizedOperationResult.new
-        pipeline_config_service.updatePipelineConfig(current_user, @pipeline_created_from_request, result)
+        updated_pipeline = pipeline_config_from_request
+        pipeline_config_service.updatePipelineConfig(current_user, updated_pipeline, result)
         if result.isSuccessful
           load_pipeline
-          json = ApiV1::Config::PipelineConfigRepresenter.new(@pipeline_config).to_hash(url_builder: self)
-          fresh_when etag: get_etag_for_pipeline(@pipeline_config.name.to_s, json)
+          json          = ApiV1::Config::PipelineConfigRepresenter.new(@pipeline_config).to_hash(url_builder: self)
+          response.etag = [get_etag_for_pipeline(@pipeline_config.name.to_s, json)]
           render json_hal_v1: json
         else
-          json = ApiV1::Config::PipelineConfigRepresenter.new(@pipeline_created_from_request).to_hash(url_builder: self)
-          fresh_when etag: get_etag_for_pipeline(@pipeline_created_from_request.name.to_s, json)
+          json = ApiV1::Config::PipelineConfigRepresenter.new(updated_pipeline).to_hash(url_builder: self)
           render_http_operation_result(result, {data: json})
+        end
+      end
+
+      def pipeline_config_from_request
+        @pipeline_config_from_request ||= PipelineConfig.new.tap do |config|
+          ApiV1::Config::PipelineConfigRepresenter.new(config).from_hash(params[:pipeline])
         end
       end
 
 
       private
       def check_for_attempted_pipeline_rename
-        get_pipeline_from_request
-        if (!@pipeline_created_from_request.name.eql?(CaseInsensitiveString.new(params[:name])))
+        unless CaseInsensitiveString.new(params[:pipeline][:name]) == CaseInsensitiveString.new(params[:name])
           result = HttpLocalizedOperationResult.new
           result.notAcceptable(LocalizedMessage::string("PIPELINE_RENAMING_NOT_ALLOWED"))
-          render_http_operation_result(result) and return
+          render_http_operation_result(result)
         end
       end
 
@@ -60,11 +65,6 @@ module ApiV1
           result.stale(LocalizedMessage::string("STALE_PIPELINE_CONFIG", params[:name]))
           render_http_operation_result(result)
         end
-      end
-
-      def get_pipeline_from_request
-        @pipeline_created_from_request = PipelineConfig.new
-        ApiV1::Config::PipelineConfigRepresenter.new(@pipeline_created_from_request).from_json(params[:pipeline].to_json)
       end
 
       def load_pipeline

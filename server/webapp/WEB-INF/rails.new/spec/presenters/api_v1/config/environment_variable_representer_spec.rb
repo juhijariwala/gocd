@@ -18,60 +18,60 @@ require 'spec_helper'
 
 describe ApiV1::Config::EnvironmentVariableRepresenter do
   it 'should render plain environment variable with hal representation' do
-    presenter = ApiV1::Config::EnvironmentVariableRepresenter.new(get_plain_text_config)
+    presenter   = ApiV1::Config::EnvironmentVariableRepresenter.new(get_plain_variable)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
     expect(actual_json).to eq(get_plain_text_hash)
   end
 
   it 'should render secure environment variable with hal representation' do
-    presenter = ApiV1::Config::EnvironmentVariableRepresenter.new(get_secure_config)
+    presenter   = ApiV1::Config::EnvironmentVariableRepresenter.new(get_secure_variable)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-    expect(actual_json).to eq(get_secure_hash)
+    expect(actual_json).to eq(get_secure_hash_with_encrypted_value)
   end
 
-  it "should convert from secure hash with encrypted value to EnvironmentVariableConfig" do
-    config = EnvironmentVariableConfig.new()
+  it 'should convert from secure hash with encrypted value to EnvironmentVariableConfig' do
+    config    = EnvironmentVariableConfig.new
     presenter = ApiV1::Config::EnvironmentVariableRepresenter.new(config)
-    presenter.from_hash(get_secure_hash)
-    expect(config).to eq(get_secure_config)
+    presenter.from_hash(get_secure_hash_with_encrypted_value)
+    expect(config).to eq(get_secure_variable)
   end
 
-  it "should convert from secure hash with plain value to EnvironmentVariableConfig" do
-    config = EnvironmentVariableConfig.new()
+  it 'should convert from secure hash with clear text value to EnvironmentVariableConfig' do
+    config    = EnvironmentVariableConfig.new
     presenter = ApiV1::Config::EnvironmentVariableRepresenter.new(config)
-    presenter.from_hash(get_secure_hash_with_plain_text_value_for_put)
-    expect(config).to eq(get_secure_config)
+    presenter.from_hash(secure_hash_with_clear_text_value)
+    expect(config).to eq(get_secure_variable)
   end
 
-  def get_secure_config
-    EnvironmentVariableConfig.new(GoCipher.new, "secure", "confidential", true)
+  def get_secure_variable
+    EnvironmentVariableConfig.new(GoCipher.new, 'secure', 'confidential', true)
   end
 
-  def get_plain_text_config
-    EnvironmentVariableConfig.new(GoCipher.new, "plain", "plain", false)
+  def get_plain_variable
+    EnvironmentVariableConfig.new(GoCipher.new, 'plain', 'plain', false)
   end
 
   def get_plain_text_hash
     {
-        name: "plain",
-        value: "plain",
-        secure: false
+      name:   'plain',
+      value:  'plain',
+      secure: false
     }
   end
 
-  def get_secure_hash
+  def get_secure_hash_with_encrypted_value
     {
-        secure: true,
-        name: "secure",
-        encrypted_value: GoCipher.new.encrypt("confidential")
+      secure:          true,
+      name:            'secure',
+      encrypted_value: GoCipher.new.encrypt('confidential')
     }
   end
 
-  def get_secure_hash_with_plain_text_value_for_put
+  def secure_hash_with_clear_text_value
     {
-        secure: true,
-        name: "secure",
-        value: "confidential"
+      secure: true,
+      name:   'secure',
+      value:  'confidential'
     }
   end
 end

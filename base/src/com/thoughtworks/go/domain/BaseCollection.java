@@ -31,7 +31,7 @@ public class BaseCollection<T> extends ArrayList<T> {
     }
 
     public BaseCollection(T... items) {
-        super(asList(items));
+        this(asList(items));
     }
 
     public T first() {

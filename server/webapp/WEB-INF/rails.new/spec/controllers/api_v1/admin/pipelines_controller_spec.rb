@@ -56,7 +56,7 @@ describe ApiV1::Admin::PipelinesController do
         it "should show pipeline config for an admin" do
           login_as_admin
           pipeline_name = "pipeline1"
-          pipeline = PipelineConfigMother.pipelineConfig(pipeline_name)
+          pipeline      = PipelineConfigMother.pipelineConfig(pipeline_name)
           @pipeline_config_service.should_receive(:getPipelineConfig).with(pipeline_name).and_return(pipeline)
 
           get_with_api_header :show, :name => pipeline_name
@@ -72,7 +72,7 @@ describe ApiV1::Admin::PipelinesController do
         it "should return 304 for show pipeline config if etag sent in request is fresh" do
           login_as_admin
           pipeline_name = "pipeline1"
-          pipeline = PipelineConfigMother.pipelineConfig(pipeline_name)
+          pipeline      = PipelineConfigMother.pipelineConfig(pipeline_name)
           @pipeline_config_service.should_receive(:getPipelineConfig).with(pipeline_name).and_return(pipeline)
           controller.stub(:go_cache).and_return(go_cache = double('go_cache'))
           go_cache.stub(:get).with("GO_PIPELINE_CONFIGS_ETAGS_CACHE", pipeline_name).and_return("latest-etag")
@@ -96,7 +96,7 @@ describe ApiV1::Admin::PipelinesController do
         it "should show pipeline config if etag sent in request is stale" do
           login_as_admin
           pipeline_name = "pipeline1"
-          pipeline = PipelineConfigMother.pipelineConfig(pipeline_name)
+          pipeline      = PipelineConfigMother.pipelineConfig(pipeline_name)
           @pipeline_config_service.should_receive(:getPipelineConfig).with(pipeline_name).and_return(pipeline)
           controller.stub(:go_cache).and_return(go_cache = double('go_cache'))
           go_cache.stub(:get).with("GO_PIPELINE_CONFIGS_ETAGS_CACHE", pipeline_name).and_return("latest-etag")
@@ -112,7 +112,7 @@ describe ApiV1::Admin::PipelinesController do
         before(:each) do
           login_as_admin
           @pipeline_name = "pipeline1"
-          @pipeline = PipelineConfigMother.pipelineConfig(@pipeline_name)
+          @pipeline      = PipelineConfigMother.pipelineConfig(@pipeline_name)
           controller.stub(:go_cache).and_return(go_cache = double('go_cache'))
           go_cache.stub(:get).with("GO_PIPELINE_CONFIGS_ETAGS_CACHE", @pipeline_name).and_return("latest-etag")
         end
@@ -128,37 +128,66 @@ describe ApiV1::Admin::PipelinesController do
           expect(actual_response).to eq(expected_response(@pipeline, ApiV1::Config::PipelineConfigRepresenter))
         end
 
+        # it "should parse empty params for an admin" do
+        #   @pipeline_config_service.should_receive(:getPipelineConfig).with(@pipeline_name).and_return(@pipeline)
+        #   @pipeline_config_service.should_receive(:updatePipelineConfig).with(anything(), anything(), anything())
+        #   controller.request.env['HTTP_IF_MATCH'] = "\"#{Digest::MD5.hexdigest("latest-etag")}\""
+        #
+        #   put_with_api_header :update, name: @pipeline_name, :pipeline => pipe_with_empty_params
+        #
+        #   expect(response).to be_ok
+        #   expect(actual_response).to eq(expected_response(@pipeline, ApiV1::Config::PipelineConfigRepresenter))
+        # end
+
+        it "should add environment variables for an admin" do
+          @pipeline_config_service.should_receive(:getPipelineConfig).with(@pipeline_name).and_return(@pipeline)
+          @pipeline_config_service.should_receive(:updatePipelineConfig).with(anything(), anything(), anything())
+          controller.request.env['HTTP_IF_MATCH'] = "\"#{Digest::MD5.hexdigest("latest-etag")}\""
+
+          pipeline_with_variables=pipeline_hash_basic.tap do |hsh|
+            hsh[:environment_variables] = [{
+                                             name:   "var_name",
+                                             value:  "env_var",
+                                             secure: true
+                                           }]
+          end
+          put_with_api_header :update, name: @pipeline_name, :pipeline => pipeline_with_variables
+
+          expect(response).to be_ok
+          expect(actual_response).to eq(expected_response(@pipeline, ApiV1::Config::PipelineConfigRepresenter))
+        end
+
         it "should not update pipeline config if etag passed does not match the one on server" do
           controller.request.env['HTTP_IF_MATCH'] = "old-etag"
 
           put_with_api_header :update, name: @pipeline_name, :pipeline => pip
 
           expect(response.code).to eq("412")
-          expect(actual_response).to eq({:message=>"Someone has modified the configuration for pipeline 'pipeline1'. Please update your copy of the config with the changes."})
+          expect(actual_response).to eq({:message => "Someone has modified the configuration for pipeline 'pipeline1'. Please update your copy of the config with the changes."})
         end
 
         it "should not update pipeline config if Invalid task type is passed in hash" do
           controller.request.env['HTTP_IF_MATCH'] = "\"#{Digest::MD5.hexdigest("latest-etag")}\""
 
-          put_with_api_header :update, name: @pipeline_name, :pipeline => pip("pipeline1","invalid_task")
+          put_with_api_header :update, name: @pipeline_name, :pipeline => pip("pipeline1","HgMaterial","invalid_task")
 
           expect(response.code).to eq("422")
-          expect(actual_response).to eq({:message=>"Your request could not be processed. Invalid Task type: invalid_task. One of '{pluggable_task, exec, Ant, nant, rake, fetch}"})
+          expect(actual_response).to eq({:message => "Your request could not be processed. Invalid Task type: invalid_task. One of '{pluggable_task, exec, Ant, nant, rake, fetch}"})
         end
         it "should not update pipeline config if Invalid material type is passed in hash" do
           controller.request.env['HTTP_IF_MATCH'] = "\"#{Digest::MD5.hexdigest("latest-etag")}\""
 
-          put_with_api_header :update, name: @pipeline_name, :pipeline => pip("pipeline1","invalid_material","exec")
+          put_with_api_header :update, name: @pipeline_name, :pipeline => pip("pipeline1", "invalid_material", "exec")
 
           expect(response.code).to eq("422")
-          expect(actual_response).to eq({:message=>"Your request could not be processed. Invalid Material type: invalid_material. One of '{DependencyMaterial, SvnMaterial, HgMaterial, P4Material, GitMaterial, TfsMaterial, PackageMaterial, PluggableSCMMaterial}"})
+          expect(actual_response).to eq({:message => "Your request could not be processed. Invalid Material type: invalid_material. One of '{DependencyMaterial, SvnMaterial, HgMaterial, P4Material, GitMaterial, TfsMaterial, PackageMaterial, PluggableSCMMaterial}"})
         end
 
         it "should not update pipeline config if no etag is passed" do
           put_with_api_header :update, name: @pipeline_name, :pipeline => pip
 
           expect(response.code).to eq("412")
-          expect(actual_response).to eq({:message=>"Someone has modified the configuration for pipeline 'pipeline1'. Please update your copy of the config with the changes."})
+          expect(actual_response).to eq({:message => "Someone has modified the configuration for pipeline 'pipeline1'. Please update your copy of the config with the changes."})
         end
 
         it "should handle server validation errors" do
@@ -194,48 +223,99 @@ describe ApiV1::Admin::PipelinesController do
           put_with_api_header :update, name: @pipeline_name, :pipeline => pip("renamed_pipeline")
 
           expect(response.code).to eq("406")
-          expect(actual_response).to eq({:message=>"Renaming of pipeline is not supported by this API."})
+          expect(actual_response).to eq({:message => "Renaming of pipeline is not supported by this API."})
         end
       end
 
       def expected_data_with_validation_errors
         {
-        enable_pipeline_locking: false,
-        errors: {labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."]},
-        label_template: "${COUNT}",
-        materials: [{type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}}],
-        name: "pipeline1",
-        stages: [{name: "mingle", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}}, jobs: []}]
+          enable_pipeline_locking: false,
+          errors:                  {labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."]},
+          label_template:          "${COUNT}",
+          materials:               [{type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}}],
+          name:                    "pipeline1",
+          stages:                  [{name: "mingle", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}}, jobs: []}]
         }
       end
 
-       def foo
+      def foo
         {
-            label_template: "${COUNT}",
-            enable_pipeline_locking: false,
-            name: "pipeline1",
-            materials: [
-                {
-                    type: "SvnMaterial",
-                    attributes: {
-                      name: "http___some_svn_url",
-                      auto_update: true,
-                      url: "http://some/svn/url",
-                      destination: "svnDir",
-                      filter: nil,
-                      check_externals: false,
-                      username: nil,
-                      password: nil
-                    }
-                }
-            ],
-            stages: [{name: "mingle", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}}, jobs: []}],
-            errors: {labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."]}
+          label_template:          "${COUNT}",
+          enable_pipeline_locking: false,
+          name:                    "pipeline1",
+          materials:               [
+                                     {
+                                       type:       "SvnMaterial",
+                                       attributes: {
+                                         name:            "http___some_svn_url",
+                                         auto_update:     true,
+                                         url:             "http://some/svn/url",
+                                         destination:     "svnDir",
+                                         filter:          nil,
+                                         check_externals: false,
+                                         username:        nil,
+                                         password:        nil
+                                       }
+                                     }
+                                   ],
+          stages:                  [{name: "mingle", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}}, jobs: []}],
+          errors:                  {labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."]}
         }
       end
-     
-      def pip (pipeline_name="pipeline1",material_type="HgMaterial",task_type="exec")
-        { _links: { self: { href: "http://localhost:8153/go/api/admin/pipelines/up42" }, doc: { href: "http://api.go.cd/#pipeline_config" }, find: { href: "http://localhost:8153/go/api/admin/pipelines/:name" } }, label_template: "Jyoti-${COUNT}", enable_pipeline_locking: false, name: "#{pipeline_name}", template_name: nil, params: [], environment_variables: [ ], materials: [ { type: "#{material_type}", attributes: { url: "../manual-testing/ant_hg/dummy", destination: "dest_dir", filter: { ignore: [ ] } }, name: "dummyhg", auto_update: true } ], stages: [ { name: "up42_stage", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: { type: "success", authorization: { roles: [ ], users: [ ] } }, environment_variables: [ ], jobs: [ { name: "up42_job", run_on_all_agents: false, environment_variables: [ ], resources: [ ], tasks: [ { type: "#{task_type}", attributes: { command: "ls", working_dir: nil }, run_if: [ ] } ], tabs: [ ], artifacts: [ ], properties: [ ] } ] } ], mingle: { base_url: nil, project_identifier: nil, mql_grouping_conditions: nil }}
+
+      def pip (pipeline_name="pipeline1", material_type="HgMaterial", task_type="exec")
+        {_links: {self: {href: "http://localhost:8153/go/api/admin/pipelines/up42"}, doc: {href: "http://api.go.cd/#pipeline_config"}, find: {href: "http://localhost:8153/go/api/admin/pipelines/:name"}}, label_template: "Jyoti-${COUNT}", enable_pipeline_locking: false, name: "#{pipeline_name}", template_name: nil, params: [], environment_variables: [], materials: [{type: "#{material_type}", attributes: {url: "../manual-testing/ant_hg/dummy", destination: "dest_dir", filter: {ignore: []}}, name: "dummyhg", auto_update: true}], stages: [{name: "up42_stage", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {roles: [], users: []}}, environment_variables: [], jobs: [{name: "up42_job", run_on_all_agents: false, environment_variables: [], resources: [], tasks: [{type: "#{task_type}", attributes: {command: "ls", working_dir: nil}, run_if: []}], tabs: [], artifacts: [], properties: []}]}], mingle: {base_url: nil, project_identifier: nil, mql_grouping_conditions: nil}}
+      end
+
+
+      def pipe_with_empty_params
+        pipeline_hash_basic.tap do |hsh|
+          hsh[:params] = []
+          hsh[:template]= nil
+        end
+      end
+
+      def pipeline_hash_basic
+        {
+          label_template:          "foo-1.0.${COUNT}-${svn}",
+          enable_pipeline_locking: false,
+          name:                    "pipeline1",
+          materials:               [
+                                     {
+                                       type:        "SvnMaterial",
+                                       attributes:  {
+                                         url:             "http://some/svn/url",
+                                         destination:     "svnDir",
+                                         check_externals: false
+                                       },
+                                       name:        "http___some_svn_url",
+                                       auto_update: true
+                                     }
+                                   ],
+          stages:                  [
+                                     {
+                                       name:                    "stage1",
+                                       fetch_materials:         true,
+                                       clean_working_directory: false,
+                                       never_cleanup_artifacts: false,
+                                       jobs:                    [
+                                                                  {
+                                                                    name:  "defaultJob",
+                                                                    tasks: [
+                                                                             {
+                                                                               type:       "ant",
+                                                                               attributes: {
+                                                                                 working_dir: "working-directory",
+                                                                                 build_file:  "build-file",
+                                                                                 target:      "target"
+                                                                               }
+                                                                             }
+                                                                           ]
+                                                                  }
+                                                                ]
+                                     }
+                                   ],
+        }
       end
 
     end

@@ -18,20 +18,11 @@ module ApiV1
   module Config
     module Tasks
       class AntTaskRepresenter < ApiV1::Config::Tasks::BaseTaskRepresenter
-        alias_method :ant_task, :represented
+        alias_method :task, :represented
 
-        property :working_dir,exec_context: :decorator
+        property :working_directory
         property :build_file
         property :target
-
-        def working_dir
-          ant_task.workingDirectory()
-        end
-
-        def working_dir=(value)
-          ant_task.setWorkingDirectory(value)
-        end
-
       end
     end
   end
