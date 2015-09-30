@@ -32,11 +32,27 @@ describe ApiV1::Config::ApprovalRepresenter do
   it "should render error" do
     approval = Approval.new()
     approval.setType("junk")
+    admins = [AdminRole.new(CaseInsensitiveString.new("role1")), AdminUser.new(CaseInsensitiveString.new("user1"))].to_java(com.thoughtworks.go.domain.config.Admin)
+    auth_config = AuthConfig.new(admins)
+    approval.setAuthConfig(auth_config)
+    auth_config.addError("name", "error")
+    approval.addError("type", "You have defined approval type as 'junk'. Approval can only be of the type 'manual' or 'success'.")
 
-    approval.validateTree(PipelineConfigSaveValidationContext.forChain([]))
     presenter = ApiV1::Config::ApprovalRepresenter.new(approval)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
     expect(actual_json).to eq(approval_hash_with_errors)
+  end
+
+  it "should deserialize" do
+    admins = [
+        AdminRole.new(CaseInsensitiveString.new("role1")), AdminRole.new(CaseInsensitiveString.new("role2")),
+        AdminUser.new(CaseInsensitiveString.new("user1")), AdminUser.new(CaseInsensitiveString.new("user2"))].to_java(com.thoughtworks.go.domain.config.Admin)
+    auth_config = AuthConfig.new(admins)
+    expected = Approval.new(auth_config)
+
+    approval = Approval.new
+    ApiV1::Config::ApprovalRepresenter.new(approval).from_hash(approval_hash)
+    expect(approval).to eq(expected)
   end
 
   def approval_hash
@@ -52,8 +68,14 @@ describe ApiV1::Config::ApprovalRepresenter do
   def approval_hash_with_errors
     {
       type: "junk",
-      authorization: {},
-      errors: {
+        authorization: {
+        roles: ["role1"],
+        users: ["user1"],
+        errors: {
+          name: ["error"]
+        }
+    },
+    errors: {
         type: ["You have defined approval type as 'junk'. Approval can only be of the type 'manual' or 'success'."]
       }
     }

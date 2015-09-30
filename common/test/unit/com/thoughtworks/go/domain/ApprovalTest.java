@@ -299,12 +299,10 @@ public class ApprovalTest {
         PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
 
         assertThat(approval.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig)), is(false));
-        AdminRole role = approval.getAuthConfig().getRoles().get(0);
-        assertThat(role.errors().isEmpty(), is(false));
-        assertThat(role.errors().firstError(), is("Role \"role\" does not exist!"));
+        assertThat(approval.getAuthConfig().errors().isEmpty(), is(false));
+        assertThat(approval.getAuthConfig().errors().firstError(), is("Role \"role\" does not exist!"));
     }
 
-    
     private CruiseConfig cruiseConfigWithSecurity(Role roleDefinition, Admin admins) {
         CruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("pipeline");
         SecurityConfig securityConfig = cruiseConfig.server().security();

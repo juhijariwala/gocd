@@ -115,6 +115,7 @@ public class Approval implements Validatable, ParamsAttributeAware {
         boolean isValid = errors.isEmpty();
         for (Admin admin : authConfig) {
             admin.validate(validationContext);
+            authConfig.errors().addAll(admin.errors());
             isValid = admin.errors().isEmpty() && isValid;
         }
         return isValid;

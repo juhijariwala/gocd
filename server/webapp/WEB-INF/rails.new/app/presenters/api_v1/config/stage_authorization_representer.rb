@@ -20,13 +20,14 @@ module ApiV1
 
     collection :roles, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String, skip_nil: true, render_empty: false
     collection :users, embedded: false, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String, skip_nil: true, render_empty: false
+    property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
     def roles
       authorization.getRoles().map { |role| role.getName().to_s }
     end
 
     def roles= value
-      value.each { |role| authorization.add(AdminRole.new(CaseInsensitiveString.new(role))) }
+      value.each { |role| authorization.add(com.thoughtworks.go.config.AdminRole.new(role)) }
     end
 
     def users
@@ -34,7 +35,7 @@ module ApiV1
     end
 
     def users=(value)
-      value.each { |user| authorization.add(AdminUser.new(CaseInsensitiveString.new(user))) }
+      value.each { |user| authorization.add(com.thoughtworks.go.config.AdminUser.new(user)) }
     end
   end
 end

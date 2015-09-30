@@ -22,12 +22,7 @@ import com.thoughtworks.go.domain.config.Admin;
 @ConfigTag("authorization")
 @ConfigCollection(Admin.class)
 public class AuthConfig extends AdminsConfig {
-
     public AuthConfig() {
-    }
-
-    public ConfigErrors errors() {
-        return new ConfigErrors();
     }
 
     public AuthConfig(Admin... admins) {
