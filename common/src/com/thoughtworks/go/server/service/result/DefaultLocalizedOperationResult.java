@@ -57,4 +57,9 @@ public class DefaultLocalizedOperationResult implements LocalizedOperationResult
     @Override
     public void notImplemented(Localizable localizable) {
     }
+
+    @Override
+    public void unprocessableEntity(Localizable localizable) {
+
+    }
 }

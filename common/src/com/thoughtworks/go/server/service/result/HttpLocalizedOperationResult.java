@@ -55,6 +55,12 @@ public class HttpLocalizedOperationResult implements LocalizedOperationResult {
         httpCode = HttpStatus.SC_NOT_IMPLEMENTED;
     }
 
+    @Override
+    public void unprocessableEntity(Localizable message) {
+        this.message = message;
+        this.httpCode = HttpStatus.SC_UNPROCESSABLE_ENTITY;
+    }
+
     public void unauthorized(Localizable message, HealthStateType healthStateType) {
         this.message = message;
         this.healthStateType = healthStateType;

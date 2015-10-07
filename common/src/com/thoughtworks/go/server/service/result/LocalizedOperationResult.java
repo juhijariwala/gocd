@@ -44,4 +44,6 @@ public interface LocalizedOperationResult {
     void setMessage(Localizable message);
 
     void notImplemented(Localizable localizable);
+
+    void unprocessableEntity(Localizable localizable);
 }

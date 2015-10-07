@@ -69,6 +69,11 @@ public class SubsectionLocalizedOperationResult implements LocalizedOperationRes
         throw new UnsupportedOperationException("not supported");
     }
 
+    @Override
+    public void unprocessableEntity(Localizable localizable) {
+        throw new UnsupportedOperationException("not supported");
+    }
+
     public String replacementContent(Localizer localizer) {
         return message.localize(localizer);
     }

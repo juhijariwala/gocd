@@ -180,7 +180,7 @@ public class GoConfigDao {
                 if (pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig))) {
                     cachedConfigService.writePipelineWithLock(pipelineConfig);
                 } else {
-                    result.notAcceptable(LocalizedMessage.string("PIPELINE_CONFIG_VALIDATION_FAILED", pipelineConfig.name()));
+                    result.unprocessableEntity(LocalizedMessage.string("PIPELINE_CONFIG_VALIDATION_FAILED", pipelineConfig.name()));
                 }
             }
         }
