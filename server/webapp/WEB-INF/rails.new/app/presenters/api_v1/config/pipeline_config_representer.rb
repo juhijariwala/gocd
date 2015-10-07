@@ -41,10 +41,10 @@ module ApiV1
 
       property :label_template
       property :enable_pipeline_locking,
-      getter: lambda{|options| self.isLock },
-      setter: lambda{|val,options| val ? self.lockExplicitly : self.unlockExplicitly}
+               getter: lambda { |options| self.isLock },
+               setter: lambda { |val, options| val ? self.lockExplicitly : self.unlockExplicitly }
 
-      property :name ,case_insensitive_string: true
+      property :name, case_insensitive_string: true
       property :template_name, as: :template, case_insensitive_string: true
 
       collection :params, exec_context: :decorator, decorator: ApiV1::Config::ParamRepresenter,
@@ -53,9 +53,9 @@ module ApiV1
 
       collection :environment_variables,
                  exec_context: :decorator,
-                 decorator: ApiV1::Config::EnvironmentVariableRepresenter,
+                 decorator:    ApiV1::Config::EnvironmentVariableRepresenter,
                  expect_hash:  true,
-                 class: com.thoughtworks.go.config.EnvironmentVariableConfig
+                 class:        com.thoughtworks.go.config.EnvironmentVariableConfig
 
       collection :materials,
                  exec_context: :decorator,
@@ -66,28 +66,26 @@ module ApiV1
                  }
       collection :stages,
                  exec_context: :decorator,
-                 decorator: ApiV1::Config::StageRepresenter,
+                 decorator:    ApiV1::Config::StageRepresenter,
                  expect_hash:  true,
-                 class: com.thoughtworks.go.config.StageConfig
+                 class:        com.thoughtworks.go.config.StageConfig
 
       property :tracking_tool,
                exec_context: :decorator,
                decorator:    ApiV1::Config::TrackingTool::TrackingToolRepresenter,
-               expect_hash: true,
+               expect_hash:  true,
                class:        lambda { |object, *|
-                 puts object[:type]
-                 puts object['type']
                  ApiV1::Config::TrackingTool::TrackingToolRepresenter.get_class(object[:type]||object['type'])
                }
 
       property :timer,
                decorator: ApiV1::Config::TimerRepresenter,
-               class: com.thoughtworks.go.config.TimerConfig
+               class:     com.thoughtworks.go.config.TimerConfig
       property :errors,
                exec_context: :decorator,
-               decorator: ApiV1::Config::ErrorRepresenter,
-               skip_parse: true,
-               skip_render: lambda { |object, options| object.empty? }
+               decorator:    ApiV1::Config::ErrorRepresenter,
+               skip_parse:   true,
+               skip_render:  lambda { |object, options| object.empty? }
 
 
       delegate :name, :name=, to: :pipeline
