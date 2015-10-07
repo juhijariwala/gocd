@@ -191,10 +191,8 @@ public class DependencyMaterialConfigTest {
         PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig());
 
         DependencyMaterialConfig dependencyMaterialConfig = new DependencyMaterialConfig(new CaseInsensitiveString("upstream_stage"), new CaseInsensitiveString("upstream_pipeline"), new CaseInsensitiveString("stage"));
-        PipelineConfig pipeline = new PipelineConfig();
+        PipelineConfig pipeline = new PipelineConfig(new CaseInsensitiveString("p"), new MaterialConfigs());
         dependencyMaterialConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipeline));
         assertThat(dependencyMaterialConfig.errors().on(DependencyMaterialConfig.PIPELINE_STAGE_NAME), is("Pipeline with name 'upstream_pipeline' does not exist"));
     }
-
-
 }

@@ -85,14 +85,16 @@ public class ConfigSaveValidationContextTest {
 
     @Test
     public void shouldReturnIfTheContextBelongsToPipeline(){
-        ValidationContext context = ConfigSaveValidationContext.forChain(new PipelineConfig());
-        assertThat(context.isWithinPipeline(), is(true));
+        ValidationContext context = ConfigSaveValidationContext.forChain(new BasicPipelineConfigs());
+        assertThat(context.isWithinPipelines(), is(true));
+        assertThat(context.isWithinTemplates(), is(false));
     }
 
     @Test
     public void shouldReturnIfTheContextBelongsToTemplate() {
-        ValidationContext context = ConfigSaveValidationContext.forChain(new PipelineTemplateConfig());
-        assertThat(context.isWithinPipeline(), is(false));
+        ValidationContext context = ConfigSaveValidationContext.forChain(new TemplatesConfig());
+        assertThat(context.isWithinPipelines(), is(false));
+        assertThat(context.isWithinTemplates(), is(true));
     }
 
     @Test

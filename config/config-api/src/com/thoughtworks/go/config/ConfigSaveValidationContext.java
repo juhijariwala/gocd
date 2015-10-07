@@ -187,11 +187,6 @@ public class ConfigSaveValidationContext implements ValidationContext{
         return hasParentOfType(PipelineConfigs.class);
     }
 
-    @Override
-    public boolean isWithinPipeline() {
-        return hasParentOfType(PipelineConfig.class);
-    }
-
     private <T> boolean hasParentOfType(Class<T> validatable) {
         return getFirstOfType(validatable) != null;
     }

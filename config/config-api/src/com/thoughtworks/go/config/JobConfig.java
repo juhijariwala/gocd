@@ -331,19 +331,20 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
     }
 
     public void validate(ValidationContext validationContext) {
-        if(StringUtil.isBlank(CaseInsensitiveString.str(name()))){
+        if (StringUtil.isBlank(CaseInsensitiveString.str(name()))) {
             errors.add(NAME, "Name is a required field");
-        }
-        if (!StringUtil.isBlank(CaseInsensitiveString.str(name())) && (CaseInsensitiveString.str(name()).length() > 255 || XmlUtils.doesNotMatchUsingXsdRegex(JOB_NAME_PATTERN_REGEX, CaseInsensitiveString.str(name())))) {
-            String message = String.format("Invalid job name '%s'. This must be alphanumeric and can contain underscores and periods. The maximum allowed length is %d characters.", name(),
-                    NameTypeValidator.MAX_LENGTH);
-            errors.add(NAME, message);
-        }
-        if (RunOnAllAgentsJobTypeConfig.hasMarker(CaseInsensitiveString.str(jobName))) {
-            errors.add(NAME, String.format("A job cannot have '%s' in it's name: %s", RunOnAllAgentsJobTypeConfig.MARKER, jobName));
-        }
-        if (RunMultipleInstanceJobTypeConfig.hasMarker(CaseInsensitiveString.str(jobName))) {
-            errors.add(NAME, String.format("A job cannot have '%s' in it's name: %s", RunMultipleInstanceJobTypeConfig.MARKER, jobName));
+        } else {
+            if ((CaseInsensitiveString.str(name()).length() > 255 || XmlUtils.doesNotMatchUsingXsdRegex(JOB_NAME_PATTERN_REGEX, CaseInsensitiveString.str(name())))) {
+                String message = String.format("Invalid job name '%s'. This must be alphanumeric and can contain underscores and periods. The maximum allowed length is %d characters.", name(),
+                        NameTypeValidator.MAX_LENGTH);
+                errors.add(NAME, message);
+            }
+            if (RunOnAllAgentsJobTypeConfig.hasMarker(CaseInsensitiveString.str(jobName))) {
+                errors.add(NAME, String.format("A job cannot have '%s' in it's name: %s", RunOnAllAgentsJobTypeConfig.MARKER, jobName));
+            }
+            if (RunMultipleInstanceJobTypeConfig.hasMarker(CaseInsensitiveString.str(jobName))) {
+                errors.add(NAME, String.format("A job cannot have '%s' in it's name: %s", RunMultipleInstanceJobTypeConfig.MARKER, jobName));
+            }
         }
         if (runInstanceCount != null) {
             try {

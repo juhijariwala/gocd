@@ -24,8 +24,6 @@ public interface ValidationContext {
 
     boolean isWithinPipelines();
 
-    boolean isWithinPipeline();
-
     PipelineConfig getPipeline();
 
     MaterialConfigs getAllMaterialsByFingerPrint(String fingerprint);

@@ -73,7 +73,7 @@ public class PipelineConfigSaveValidationContextTest {
     public void shouldFindPipelineByName(){
         BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1");
         PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
-        PipelineConfigSaveValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineConfig());
+        PipelineConfigSaveValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineConfig(new CaseInsensitiveString("p2"), new MaterialConfigs()));
         assertThat(context.getPipelineConfigByName(new CaseInsensitiveString("p1")), is(cruiseConfig.allPipelines().get(0)));
         assertThat(context.getPipelineConfigByName(new CaseInsensitiveString("does_not_exist")), is(nullValue()));
     }
@@ -103,13 +103,8 @@ public class PipelineConfigSaveValidationContextTest {
     @Test
     public void shouldReturnIfTheContextBelongsToPipeline(){
         ValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineConfig());
-        Assert.assertThat(context.isWithinPipeline(), is(true));
-    }
-
-    @Test
-    public void shouldReturnIfTheContextBelongsToTemplate(){
-        ValidationContext context = PipelineConfigSaveValidationContext.forChain(new PipelineTemplateConfig());
-        Assert.assertThat(context.isWithinPipeline(), is(false));
+        Assert.assertThat(context.isWithinPipelines(), is(true));
+        Assert.assertThat(context.isWithinTemplates(), is(false));
     }
 
     @Test

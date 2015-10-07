@@ -21,13 +21,12 @@ import com.thoughtworks.go.config.remote.ConfigReposConfig;
 import com.thoughtworks.go.util.Node;
 import org.apache.commons.lang.NotImplementedException;
 
-import java.util.List;
 import java.util.Set;
 
 public class PipelineConfigSaveValidationContext implements ValidationContext {
     private final Validatable immediateParent;
     private PipelineConfig pipelineBeingValidated;
-    private boolean isWithinPipelines;
+    private boolean isEditingAPipeline = true;//Does not support template editing yet
     private final PipelineConfigSaveValidationContext parentContext;
     private PipelineConfig pipeline;
     private StageConfig stage;
@@ -48,9 +47,6 @@ public class PipelineConfigSaveValidationContext implements ValidationContext {
             this.pipeline = (PipelineConfig) immediateParent;
         } else if (parentContext.pipeline != null) {
             this.pipeline = parentContext.pipeline;
-        }
-        if (this.pipeline != null) {
-            this.isWithinPipelines = !pipeline.hasTemplate();
         }
         if (immediateParent instanceof JobConfig) {
             this.job = (JobConfig) immediateParent;
@@ -106,16 +102,11 @@ public class PipelineConfigSaveValidationContext implements ValidationContext {
     }
 
     public boolean isWithinTemplates() {
-        return !isWithinPipelines;
+        return !isEditingAPipeline;
     }
 
     public boolean isWithinPipelines() {
-        return isWithinPipelines;
-    }
-
-    @Override
-    public boolean isWithinPipeline() {
-        return getPipeline() != null;
+        return isEditingAPipeline;
     }
 
     public PipelineConfigs getPipelineGroup() {

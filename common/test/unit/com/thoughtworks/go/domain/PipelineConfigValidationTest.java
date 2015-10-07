@@ -19,6 +19,7 @@ package com.thoughtworks.go.domain;
 import java.util.Arrays;
 import java.util.List;
 
+import com.rits.cloning.Cloner;
 import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.config.materials.MaterialConfigs;
 import com.thoughtworks.go.config.materials.PackageMaterialConfig;
@@ -29,14 +30,20 @@ import com.thoughtworks.go.config.materials.perforce.P4MaterialConfig;
 import com.thoughtworks.go.domain.packagerepository.PackageDefinitionMother;
 import com.thoughtworks.go.helper.GoConfigMother;
 import com.thoughtworks.go.helper.MaterialConfigsMother;
+import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
 
 public class PipelineConfigValidationTest {
     private CruiseConfig config;
@@ -49,6 +56,7 @@ public class PipelineConfigValidationTest {
         config = GoConfigMother.configWithPipelines("pipeline1", "pipeline2", "pipeline3", "go");
         pipeline = config.pipelineConfigByName(new CaseInsensitiveString("go"));
         goConfigMother = new GoConfigMother();
+        PipelineConfigurationCache.getInstance().onConfigChange(config);
     }
 
     @Test
@@ -205,4 +213,263 @@ public class PipelineConfigValidationTest {
         materialConfig.validate(validationContext);
         assertThat(materialConfig.errors().on("view"), is("P4 view cannot be empty."));
     }
+
+    @Test
+    public void shouldValidateAndUpdatePipelineConfig() {
+        PipelineConfig pipeline = new PipelineConfig();
+        pipeline.setName("validPipeline");
+        pipeline.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.gitMaterialConfig(), MaterialConfigsMother.svnMaterialConfig()));
+        StageConfig stage1 = getStageConfig("stage1", "s1j1");
+        StageConfig stage2 = getStageConfig("stage2", "s2j1");
+        pipeline.getStages().add(stage1);
+        pipeline.getStages().add(stage2);
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipeline)));
+        boolean isValid = pipeline.validateTree(PipelineConfigSaveValidationContext.forChain(pipeline));
+        assertThat(isValid, is(true));
+        assertThat(pipeline.materialConfigs().errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(0).errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(1).errors().isEmpty(), is(true));
+        assertThat(pipeline.errors().getAll().isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldHandleNullStageNamesWhileValidating() {
+        StageConfig s1 = new StageConfig();
+        StageConfig s2 = new StageConfig(new CaseInsensitiveString("s2"), new JobConfigs());
+        PipelineConfig pipeline = new PipelineConfig(new CaseInsensitiveString("p1"), new MaterialConfigs() , s1, s2);
+        pipeline.validate(null);
+        assertThat(s1.errors().on(StageConfig.NAME).contains("Invalid stage name 'null'"), is(true));
+    }
+
+    @Test
+    public void shouldValidateTree() {
+        PipelineConfig pipeline = new PipelineConfig();
+        pipeline.setName("pipeline");
+        pipeline.addEnvironmentVariable("", "");
+        pipeline.addParam(new ParamConfig("",""));
+        pipeline.setMaterialConfigs(new MaterialConfigs(MaterialConfigsMother.gitMaterialConfig(), MaterialConfigsMother.svnMaterialConfig()));
+        StageConfig stage1 = getStageConfig("stage1", "s1j1");
+        StageConfig stage2 = getStageConfig("stage2", "s2j1");
+        pipeline.getStages().add(stage1);
+        pipeline.getStages().add(stage2);
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipeline)));
+        boolean isValid = pipeline.validateTree(PipelineConfigSaveValidationContext.forChain(pipeline));
+        assertThat(isValid, is(false));
+        assertThat(pipeline.getVariables().get(0).errors().firstError(), is("Environment Variable cannot have an empty name for pipeline 'pipeline'."));
+        assertThat(pipeline.getParams().get(0).errors().firstError(), is("Parameter cannot have an empty name for pipeline 'pipeline'."));
+        assertThat(pipeline.materialConfigs().errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(0).errors().isEmpty(), is(true));
+        assertThat(pipeline.materialConfigs().get(1).errors().isEmpty(), is(true));
+        assertThat(pipeline.errors().getAll().isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldFailValidateWhenUpstreamPipelineForDependencyMaterailDoesNotExist() {
+        String upstreamPipeline = "non-existant";
+        PipelineConfig pipelineConfig = GoConfigMother.createPipelineConfigWithMaterialConfig(
+                new DependencyMaterialConfig(new CaseInsensitiveString(upstreamPipeline), new CaseInsensitiveString("non-existant")));
+
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipelineConfig)));
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(isValid, is(false));
+
+        ConfigErrors materialErrors = pipelineConfig.materialConfigs().first().errors();
+        assertThat(materialErrors.isEmpty(), is(false));
+        assertThat(materialErrors.firstError(), is("Pipeline with name 'non-existant' does not exist"));
+    }
+
+    @Test
+    public void shouldFailValidateWhenUpstreamStageForDependencyMaterailDoesNotExist() {
+        String upstreamPipeline = "upstream";
+        String upstreamStage = "non-existant";
+        PipelineConfig upstream = GoConfigMother.createPipelineConfigWithMaterialConfig(upstreamPipeline,new GitMaterialConfig("url"));
+        PipelineConfig pipelineConfig = GoConfigMother.createPipelineConfigWithMaterialConfig("downstream",
+                new DependencyMaterialConfig(new CaseInsensitiveString(upstreamPipeline), new CaseInsensitiveString(upstreamStage)));
+        PipelineConfigurationCache.getInstance().onConfigChange(new BasicCruiseConfig(new BasicPipelineConfigs(pipelineConfig, upstream)));
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(isValid, is(false));
+        ConfigErrors materialErrors = pipelineConfig.materialConfigs().first().errors();
+        assertThat(materialErrors.isEmpty(), is(false));
+        assertThat(materialErrors.firstError(), is("Stage with name 'non-existant' does not exist on pipeline 'upstream'"));
+    }
+
+    @Test
+    public void shouldReturnTrueIfAllDescendentsAreValid(){
+        StageConfig stageConfig = mock(StageConfig.class);
+        MaterialConfigs materialConfigs = mock(MaterialConfigs.class);
+        when(materialConfigs.iterator()).thenReturn(new MaterialConfigs().iterator());
+        ParamsConfig paramsConfig = mock(ParamsConfig.class);
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        TrackingTool trackingTool = mock(TrackingTool.class);
+        MingleConfig mingleConfig = mock(MingleConfig.class);
+        TimerConfig timerConfig = mock(TimerConfig.class);
+        when(stageConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(materialConfigs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(paramsConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(trackingTool.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(mingleConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        when(timerConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("p1"), materialConfigs, stageConfig);
+        pipelineConfig.setParams(paramsConfig);
+        pipelineConfig.setVariables(variables);
+        pipelineConfig.setTrackingTool(trackingTool);
+        pipelineConfig.setMingleConfig(mingleConfig);
+        pipelineConfig.setTimer(timerConfig);
+
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertTrue(isValid);
+        verify(stageConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(materialConfigs, atLeastOnce()).iterator();
+        verify(materialConfigs).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(paramsConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(variables).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(trackingTool).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(mingleConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(timerConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
+    @Test
+    public void shouldReturnFalseIfAnyDescendentIsInValid(){
+        StageConfig stageConfig = mock(StageConfig.class);
+        MaterialConfigs materialConfigs = mock(MaterialConfigs.class);
+        when(materialConfigs.iterator()).thenReturn(new MaterialConfigs().iterator());
+        ParamsConfig paramsConfig = mock(ParamsConfig.class);
+        EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
+        TrackingTool trackingTool = mock(TrackingTool.class);
+        MingleConfig mingleConfig = mock(MingleConfig.class);
+        TimerConfig timerConfig = mock(TimerConfig.class);
+        when(stageConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(materialConfigs.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(paramsConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(variables.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(trackingTool.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(mingleConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        when(timerConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("p1"), materialConfigs, stageConfig);
+        pipelineConfig.setParams(paramsConfig);
+        pipelineConfig.setVariables(variables);
+        pipelineConfig.setTrackingTool(trackingTool);
+        pipelineConfig.setMingleConfig(mingleConfig);
+        pipelineConfig.setTimer(timerConfig);
+
+        boolean isValid = pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertFalse(isValid);
+        verify(stageConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(materialConfigs).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(paramsConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(variables).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(trackingTool).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(mingleConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+        verify(timerConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
+    }
+
+    @Test
+    public void shouldValidateAPipelineHasAtleastOneStage(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("p"), new MaterialConfigs());
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().on("stages"), is("A pipeline must have at least one stage"));
+    }
+
+    @Test
+    public void shouldDetectCyclicDependencies() {
+        String pipelineName = "p1";
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines(pipelineName, "p2", "p3");
+        PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
+        p2.addMaterialConfig(new DependencyMaterialConfig(new CaseInsensitiveString(pipelineName), new CaseInsensitiveString("stage")));
+        PipelineConfig p3 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p3"));
+        p3.addMaterialConfig(new DependencyMaterialConfig(new CaseInsensitiveString("p2"), new CaseInsensitiveString("stage")));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        PipelineConfig p1 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString(pipelineName));
+        p1 = new Cloner().deepClone(p1); // Do not remove cloning else it changes the underlying cache object defeating the purpose of the test.
+        p1.addMaterialConfig(new DependencyMaterialConfig(new CaseInsensitiveString("p3"), new CaseInsensitiveString("stage")));
+        p1.validateTree(PipelineConfigSaveValidationContext.forChain(p1));
+        assertThat(p1.materialConfigs().errors().isEmpty(), is(false));
+        assertThat(p1.materialConfigs().errors().on("base"), is("Circular dependency: p1 <- p2 <- p3 <- p1"));
+    }
+
+    @Test
+    public void shouldValidateThatPipelineAssociatedToATemplateDoesNotHaveStagesDefinedLocally(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("wunderbar"), new MaterialConfigs());
+        config.addPipeline("g", pipelineConfig);
+        PipelineConfigurationCache.getInstance().onConfigChange(config);
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("template-name"));
+        pipelineConfig.addStageWithoutValidityAssertion(new StageConfig(new CaseInsensitiveString("stage"), new JobConfigs()));
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().on("stages"), is("Cannot add stages to pipeline 'wunderbar' which already references template 'template-name'"));
+        assertThat(pipelineConfig.errors().on("template"), is("Cannot set template 'template-name' on pipeline 'wunderbar' because it already has stages defined"));
+    }
+
+    @Test
+    public void shouldAddValidationErrorWhenAssociatedTemplateDoesNotExist(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("wunderbar"), new MaterialConfigs());
+        config.addPipeline("g", pipelineConfig);
+        PipelineConfigurationCache.getInstance().onConfigChange(config);
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("does-not-exist"));
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().on("template"), is("Template 'does-not-exist' does not exist"));
+    }
+
+    @Test
+    public void shouldNotAddValidationErrorWhenAssociatedTemplateExists(){
+        PipelineConfig pipelineConfig = new PipelineConfig(new CaseInsensitiveString("wunderbar"), new MaterialConfigs());
+        config.addPipeline("g", pipelineConfig);
+        config.addTemplate(new PipelineTemplateConfig(new CaseInsensitiveString("t1")));
+        PipelineConfigurationCache.getInstance().onConfigChange(config);
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("t1"));
+        pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig));
+        assertThat(pipelineConfig.errors().getAllOn("template"), is(CoreMatchers.nullValue()));
+    }
+
+    @Test
+    public void shouldFailValidationIfAStageIsDeletedWhileItsStillReferredToByADownstreamPipeline(){
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1", "p2");
+        PipelineConfig p1 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p1"));
+        PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
+        p2.addMaterialConfig(new DependencyMaterialConfig(p1.name(), p1.first().name()));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("s1"), new JobConfigs(new JobConfig(new CaseInsensitiveString("j1"))));
+        PipelineConfig pipelineConfig = new PipelineConfig(p1.name(), new MaterialConfigs(), stageConfig);
+        PipelineConfigSaveValidationContext validationContext = PipelineConfigSaveValidationContext.forChain(pipelineConfig);
+
+        pipelineConfig.validateTree(validationContext);
+        assertThat(pipelineConfig.errors().on("base"), is("Stage with name 'stage' does not exist on pipeline 'p1', it is being referred to from pipeline 'p2'"));
+        p2 = PipelineConfigurationCache.getInstance().getPipelineConfig("p2");
+        assertThat(p2.materialConfigs().getDependencyMaterial().errors().isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldFailValidationIfAJobIsDeletedWhileItsStillReferredToByADescendentPipelineThroughFetchArtifact(){
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1", "p2", "p3");
+        PipelineConfig p1 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p1"));
+        PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
+        PipelineConfig p3 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p3"));
+        p2.addMaterialConfig(new DependencyMaterialConfig(p1.name(), p1.first().name()));
+        p3.addMaterialConfig(new DependencyMaterialConfig(p2.name(), p2.first().name()));
+        p3.first().getJobs().first().addTask(new FetchTask(new CaseInsensitiveString("p1/p2"), p1.first().name(), p1.first().getJobs().first().name(), "src", "dest"));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("stage"), new JobConfigs(new JobConfig(new CaseInsensitiveString("new-job"))));
+        PipelineConfig pipelineConfig = new PipelineConfig(p1.name(), new MaterialConfigs(), stageConfig);
+        PipelineConfigSaveValidationContext validationContext = PipelineConfigSaveValidationContext.forChain(pipelineConfig);
+
+        pipelineConfig.validateTree(validationContext);
+        assertThat(pipelineConfig.errors().on("base"), is("Pipeline \"p3\" tries to fetch artifact from job \"p1 :: stage :: job\" which does not exist."));
+        p3 = PipelineConfigurationCache.getInstance().getPipelineConfig("p3");
+        assertThat(p3.first().getJobs().first().getTasks().first().errors().isEmpty(), is(true));
+    }
+
+    private StageConfig getStageConfig(String stageName, String jobName) {
+        JobConfig jobConfig = new JobConfig(new CaseInsensitiveString(jobName));
+        jobConfig.addTask(new AntTask());
+        jobConfig.addTask(new ExecTask("command", "", "workingDir"));
+        jobConfig.artifactPlans().add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
+        jobConfig.addVariable("env1", "val1");
+        jobConfig.addResource("powerful");
+        JobConfigs jobConfigs = new JobConfigs(jobConfig);
+        return new StageConfig(new CaseInsensitiveString(stageName), jobConfigs);
+    }
+
 }
