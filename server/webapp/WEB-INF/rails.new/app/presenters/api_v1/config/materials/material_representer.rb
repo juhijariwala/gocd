@@ -52,11 +52,7 @@ module ApiV1
 
         class << self
           def get_material_type(type)
-            if klass = MATERIAL_TYPE_MAP[type]
-              klass
-            else
-              raise UnprocessableEntity, "Invalid material type '#{type}'. It has to be one of '#{MATERIAL_TYPE_MAP.keys.join(' ')}'"
-            end
+            MATERIAL_TYPE_MAP[type] or (raise UnprocessableEntity, "Invalid material type '#{type}'. It has to be one of '#{MATERIAL_TYPE_MAP.keys.join(' ')}'")
           end
         end
 
