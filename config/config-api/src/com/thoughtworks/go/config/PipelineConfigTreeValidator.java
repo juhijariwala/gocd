@@ -91,11 +91,14 @@ public class PipelineConfigTreeValidator {
             for (JobConfig jobConfig : stageConfig.getJobs()) {
                 for (Task task : jobConfig.getTasks()) {
                     if (task instanceof FetchTask) {
-                        FetchTask fetchTask = new Cloner().deepClone((FetchTask) task);
-                        fetchTask.validateTask(validationContext.withParent(downstreamPipeline).withParent(stageConfig).withParent(jobConfig));
-                        List<String> allErrors = fetchTask.errors().getAll();
-                        for (String error : allErrors) {
-                            pipelineConfig.errors().add("base", error);
+                        FetchTask fetchTask = (FetchTask) task;
+                        if (fetchTask.getPipelineNamePathFromAncestor().pathIncludingAncestor().contains(pipelineConfig.name())) {
+                            fetchTask = new Cloner().deepClone(fetchTask);
+                            fetchTask.validateTask(validationContext.withParent(downstreamPipeline).withParent(stageConfig).withParent(jobConfig));
+                            List<String> allErrors = fetchTask.errors().getAll();
+                            for (String error : allErrors) {
+                                pipelineConfig.errors().add("base", error);
+                            }
                         }
                     }
                 }
