@@ -27,10 +27,9 @@ describe ApiV1::Config::ApprovalRepresenter do
   it 'should convert basic hash to Approval object' do
     approval = Approval.new()
 
-    ApiV1::Config::StageRepresenter.new(approval).from_hash(approval_hash)
+    ApiV1::Config::ApprovalRepresenter.new(approval).from_hash(approval_hash)
     expect(approval.getType).to eq(get_approval.getType)
   end
-
 
   it "should render error" do
     approval = Approval.new()

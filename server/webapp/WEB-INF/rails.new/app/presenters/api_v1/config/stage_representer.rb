@@ -16,7 +16,6 @@
 
 module ApiV1
   class Config::StageRepresenter < ApiV1::BaseRepresenter
-    include JavaImports
     alias_method :stage, :represented
 
     property :name, case_insensitive_string: true
