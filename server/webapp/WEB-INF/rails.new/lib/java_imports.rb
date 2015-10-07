@@ -58,6 +58,8 @@ module JavaImports
   java_import com.thoughtworks.go.domain.materials.MatchedRevision unless defined? MatchedRevision
   java_import com.thoughtworks.go.domain.materials.Material unless defined? Material
   java_import com.thoughtworks.go.config.materials.Materials unless defined? Materials
+  java_import com.thoughtworks.go.config.materials.Filter unless defined? Filter
+  java_import com.thoughtworks.go.config.materials.IgnoredFiles unless defined? IgnoredFiles
   java_import com.thoughtworks.go.domain.materials.MaterialConfig unless defined? MaterialConfig
   java_import com.thoughtworks.go.config.materials.MaterialConfigs unless defined? MaterialConfigs
   java_import com.thoughtworks.go.domain.materials.Modification unless defined? Modification
