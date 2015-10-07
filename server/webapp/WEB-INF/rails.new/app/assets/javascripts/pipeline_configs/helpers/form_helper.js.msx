@@ -376,9 +376,15 @@ define(['mithril', 'string-plus', '../models/model_mixins', 'foundation.dropdown
 
     removeButton: {
       view: function (ctrl, args, children) {
+        return <f.link {...args} class='remove'/>;
+      }
+    },
+
+    link: {
+      view: function (ctrl, args, children) {
         return (
           <a href="javascript:void(0)"
-             class={compactClasses(args, 'remove')}
+             class={compactClasses(args)}
              onclick={args.onclick}>{children}</a>
         );
       }
