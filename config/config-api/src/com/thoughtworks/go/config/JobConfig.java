@@ -27,6 +27,7 @@ import com.thoughtworks.go.util.SystemEnvironment;
 import com.thoughtworks.go.util.XmlUtils;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -115,32 +116,62 @@ public class JobConfig implements Validatable, ParamsAttributeAware, Environment
     public CaseInsensitiveString name() {
         return jobName;
     }
-    public void setName(String name){
-        this.jobName=new CaseInsensitiveString(name);
 
+    public void setName(String name) {
+        setName(new CaseInsensitiveString(name));
+    }
+
+    public void setName(CaseInsensitiveString name) {
+        this.jobName = name;
     }
 
     public Resources resources() {
         return resources;
     }
 
+    public void setResources(Resources resources) {
+        this.resources = resources;
+    }
+
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
         JobConfig jobConfig = (JobConfig) o;
 
-        return !(jobName != null ? !jobName.equals(jobConfig.jobName) : jobConfig.jobName != null);
+        if (runOnAllAgents != jobConfig.runOnAllAgents) return false;
+        if (jobName != null ? !jobName.equals(jobConfig.jobName) : jobConfig.jobName != null) return false;
+        if (variables != null ? !variables.equals(jobConfig.variables) : jobConfig.variables != null) return false;
+        if (tasks != null ? !tasks.equals(jobConfig.tasks) : jobConfig.tasks != null) return false;
+        if (tabs != null ? !tabs.equals(jobConfig.tabs) : jobConfig.tabs != null) return false;
+        if (resources != null ? !resources.equals(jobConfig.resources) : jobConfig.resources != null) return false;
+        if (artifactPlans != null ? !artifactPlans.equals(jobConfig.artifactPlans) : jobConfig.artifactPlans != null)
+            return false;
+        if (artifactPropertiesGenerators != null ? !artifactPropertiesGenerators.equals(jobConfig.artifactPropertiesGenerators) : jobConfig.artifactPropertiesGenerators != null)
+            return false;
+        if (runInstanceCount != null ? !runInstanceCount.equals(jobConfig.runInstanceCount) : jobConfig.runInstanceCount != null)
+            return false;
+        if (timeout != null ? !timeout.equals(jobConfig.timeout) : jobConfig.timeout != null) return false;
+        return !(errors != null ? !errors.equals(jobConfig.errors) : jobConfig.errors != null);
+
     }
 
     @Override
     public int hashCode() {
-        return jobName != null ? jobName.hashCode() : 0;
+        int result = jobName != null ? jobName.hashCode() : 0;
+        result = 31 * result + (variables != null ? variables.hashCode() : 0);
+        result = 31 * result + (tasks != null ? tasks.hashCode() : 0);
+        result = 31 * result + (tabs != null ? tabs.hashCode() : 0);
+        result = 31 * result + (resources != null ? resources.hashCode() : 0);
+        result = 31 * result + (artifactPlans != null ? artifactPlans.hashCode() : 0);
+        result = 31 * result + (artifactPropertiesGenerators != null ? artifactPropertiesGenerators.hashCode() : 0);
+        result = 31 * result + (runOnAllAgents ? 1 : 0);
+        result = 31 * result + (runInstanceCount != null ? runInstanceCount.hashCode() : 0);
+        result = 31 * result + (timeout != null ? timeout.hashCode() : 0);
+        result = 31 * result + (errors != null ? errors.hashCode() : 0);
+        return result;
     }
 
     public Tasks tasks() {

@@ -22,7 +22,7 @@ module ApiV1
         collection :run_if, embedded: false, exec_context: :decorator, skip_nil: true, render_empty: false
         property :on_cancel_config, as: :on_cancel, skip_nil: true,
                  exec_context:          :decorator,
-                 decorator:             OnCancelConfigRepresenter,
+                 decorator:             OnCancelRepresenter,
                  class:                 com.thoughtworks.go.config.OnCancelConfig
 
 

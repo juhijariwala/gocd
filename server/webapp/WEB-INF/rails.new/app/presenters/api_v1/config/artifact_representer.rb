@@ -18,37 +18,43 @@ module ApiV1
   class Config::ArtifactRepresenter < ApiV1::BaseRepresenter
     alias_method :artifact, :represented
 
+    ARTIFACT_TYPE_TO_STRING_TYPE_MAP = {
+      ArtifactType::unit => 'test',
+      ArtifactType::file => 'build'
+    }
+
+    ARTIFACT_TYPE_TO_ARTIFACT_CLASS_MAP = {
+      'test'  => TestArtifactPlan,
+      'build' => ArtifactPlan
+    }
+
     property :src, as: :source
     property :dest, as: :destination
     property :type, exec_context: :decorator, skip_parse: true
     property :errors, exec_context: :decorator, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
-
     def type
-      case artifact.getArtifactType
-        when ArtifactType::unit
-          "test"
-        else
-          "build"
-      end
+      ARTIFACT_TYPE_TO_STRING_TYPE_MAP[artifact.getArtifactType]
     end
 
     def errors
-      mapped_errors = {}
-      artifact.errors.each do |key, value|
-        mapped_errors[matching_error_key(key)] = value
+      mapped_errors = artifact.errors
+
+      if src_errors = mapped_errors.delete('src')
+        mapped_errors['source'] = src_errors
       end
+
+      if dest_errors = mapped_errors.delete('dest')
+        mapped_errors['destination'] = dest_errors
+      end
+
       mapped_errors
     end
 
-    private
-    def error_keys
-      {"src" => "source", "dest" => "destination"}
-    end
-
-    def matching_error_key key
-      return error_keys[key] if error_keys[key]
-      key
+    class << self
+      def get_class_for_artifact_type(type)
+        ARTIFACT_TYPE_TO_ARTIFACT_CLASS_MAP[type] || (raise ApiV1::UnprocessableEntity, "Invalid Artifact type: '#{type}'. It has to be one of #{ARTIFACT_TYPE_TO_ARTIFACT_CLASS_MAP.keys.join(', ')}")
+      end
     end
   end
 end

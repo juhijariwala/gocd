@@ -18,16 +18,19 @@ require 'spec_helper'
 
 describe ApiV1::Config::ApprovalRepresenter do
   it 'renders approval with hal representation' do
-    admins = [
-        AdminRole.new(CaseInsensitiveString.new("role1")), AdminRole.new(CaseInsensitiveString.new("role2")),
-        AdminUser.new(CaseInsensitiveString.new("user1")), AdminUser.new(CaseInsensitiveString.new("user2"))].to_java(com.thoughtworks.go.domain.config.Admin)
-    auth_config = AuthConfig.new(admins)
-
-    approval = Approval.new(auth_config)
+    approval = get_approval
     presenter = ApiV1::Config::ApprovalRepresenter.new(approval)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
     expect(actual_json).to eq(approval_hash)
   end
+
+  it 'should convert basic hash to Approval object' do
+    approval = Approval.new()
+
+    ApiV1::Config::StageRepresenter.new(approval).from_hash(approval_hash)
+    expect(approval.getType).to eq(get_approval.getType)
+  end
+
 
   it "should render error" do
     approval = Approval.new()
@@ -63,6 +66,15 @@ describe ApiV1::Config::ApprovalRepresenter do
         users: ["user1", "user2"]
       }
     }
+  end
+
+  def get_approval
+    admins      = [
+      AdminRole.new(CaseInsensitiveString.new("role1")), AdminRole.new(CaseInsensitiveString.new("role2")),
+      AdminUser.new(CaseInsensitiveString.new("user1")), AdminUser.new(CaseInsensitiveString.new("user2"))].to_java(com.thoughtworks.go.domain.config.Admin)
+    auth_config = AuthConfig.new(admins)
+
+    approval = Approval.new(auth_config)
   end
 
   def approval_hash_with_errors

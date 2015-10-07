@@ -83,9 +83,10 @@ public class StageConfig implements Validatable, ParamsAttributeAware, Environme
         return name;
     }
 
-    public void setName(String name) {
-        this.name = new CaseInsensitiveString(name);
+    public void setName(CaseInsensitiveString name) {
+        this.name = name;
     }
+
 
     /* Used in view */
     public boolean isFetchMaterials() {

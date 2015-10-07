@@ -34,6 +34,11 @@ public class ParamsConfig extends BaseCollection<ParamConfig> implements Validat
     public ParamsConfig(ParamConfig... items) {
         super(items);
     }
+
+    public ParamsConfig(List<ParamConfig> elements) {
+        super(elements);
+    }
+
     public ParamsConfig(ParamsConfig paramsConfig) {
         this();
         addAll(paramsConfig);

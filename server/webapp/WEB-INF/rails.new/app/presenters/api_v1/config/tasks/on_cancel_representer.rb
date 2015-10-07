@@ -17,13 +17,23 @@
 module ApiV1
   module Config
     module Tasks
-      class RakeTaskRepresenter < ApiV1::Config::Tasks::BaseTaskRepresenter
-        alias_method :task, :represented
+      class OnCancelRepresenter < ApiV1::BaseRepresenter
+        alias_method :on_cancel_config, :represented
 
-        property :working_directory
-        property :build_file
-        property :target
+        def from_hash(hash, options={})
+          representer = TaskRepresenter.from_hash(hash, options)
+          com.thoughtworks.go.config.OnCancelConfig.new(representer.task)
+        end
+
+        def to_hash(*options)
+          return nil if on_cancel_config.getTask.getTaskType.eql?("killallchildprocess")
+          TaskRepresenter.new(on_cancel_config.getTask).to_hash(url_builder: UrlBuilder.new)
+        end
       end
     end
   end
 end
+
+
+
+

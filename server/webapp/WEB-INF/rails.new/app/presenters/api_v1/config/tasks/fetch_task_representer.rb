@@ -20,9 +20,9 @@ module ApiV1
       class FetchTaskRepresenter < ApiV1::Config::Tasks::BaseTaskRepresenter
         alias_method :fetch_task, :represented
 
-        property :pipeline_name, as: :pipeline, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String
-        property :stage, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String
-        property :job, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String
+        property :pipeline_name, as: :pipeline, case_insensitive_string: true
+        property :stage, case_insensitive_string: true
+        property :job, case_insensitive_string: true
         property :is_source_a_file, exec_context: :decorator
         property :source, exec_context: :decorator
         property :dest, as: :destination

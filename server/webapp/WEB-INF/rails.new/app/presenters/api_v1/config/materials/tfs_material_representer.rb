@@ -15,35 +15,24 @@
 ##########################################################################
 
 module ApiV1
-    module Config
-        module Materials
-      
-            class TfsMaterialRepresenter < ScmMaterialRepresenter
-                alias_method :material_config, :represented
-        
-                property :domain
-                property :user_name, as: :username
-                property :password, skip_nil: true, exec_context: :decorator
-                property :encrypted_password, skip_nil: true, exec_context: :decorator
-        
-                property :project_path
-        
-                def password
-                end
-        
-                def password=(value)
-                    material_config.setPassword(value)
-                  end
-        
-                def encrypted_password
-                    material_config.getEncryptedPassword()
-                end
-        
-                def encrypted_password=(value)
-                    material_config.setEncryptedPassword(value)
-                end
-        
-              end
-          end
+  module Config
+    module Materials
+
+      class TfsMaterialRepresenter < ScmMaterialRepresenter
+        alias_method :material_config, :represented
+
+        property :domain
+        property :user_name, as: :username
+        property :password,
+                 skip_render: true,
+                 setter:      lambda { |value, options|
+                   self.setPassword(value)
+                 }
+        property :encrypted_password, skip_nil: true
+
+        property :project_path
+
       end
+    end
   end
+end

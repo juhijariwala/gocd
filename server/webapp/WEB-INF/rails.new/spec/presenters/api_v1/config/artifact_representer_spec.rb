@@ -18,28 +18,28 @@ require 'spec_helper'
 
 describe ApiV1::Config::ArtifactRepresenter do
   it 'should serialize build artifact' do
-    presenter = ApiV1::Config::ArtifactRepresenter.new(ArtifactPlan.new(ArtifactType::file, "target/dist.jar", "pkg"))
+    presenter   = ApiV1::Config::ArtifactRepresenter.new(ArtifactPlan.new(ArtifactType::file, 'target/dist.jar', 'pkg'))
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
     expect(actual_json).to eq(build_artifact_hash)
   end
 
   it 'should serialize test artifact' do
-    config = TestArtifactPlan.new()
-    config.setSrc("target/reports/**/*Test.xml")
-    config.setDest("reports")
-    presenter = ApiV1::Config::ArtifactRepresenter.new(config)
+    config = TestArtifactPlan.new
+    config.setSrc('target/reports/**/*Test.xml')
+    config.setDest('reports')
+    presenter   = ApiV1::Config::ArtifactRepresenter.new(config)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
     expect(actual_json).to eq(test_artifact_hash)
   end
 
   it 'should deserialize test artifact' do
-    expected = TestArtifactPlan.new()
-    expected.setSrc("target/reports/**/*Test.xml")
-    expected.setDest("reports")
+    expected = TestArtifactPlan.new
+    expected.setSrc('target/reports/**/*Test.xml')
+    expected.setDest('reports')
 
-    actual = TestArtifactPlan.new()
+    actual    = TestArtifactPlan.new
     presenter = ApiV1::Config::ArtifactRepresenter.new(actual)
     presenter.from_hash(test_artifact_hash)
     expect(actual.getSrc).to eq(expected.getSrc)
@@ -48,62 +48,63 @@ describe ApiV1::Config::ArtifactRepresenter do
     expect(actual).to eq(expected)
   end
 
-  it "should map errors" do
-    plan = ArtifactPlan.new(com.thoughtworks.go.domain.ArtifactType::unit, nil, "../foo")
+  it 'should map errors' do
+    plan = ArtifactPlan.new(com.thoughtworks.go.domain.ArtifactType::unit, nil, '../foo')
 
     plan.validateTree(PipelineConfigSaveValidationContext.forChain(PipelineConfig.new, StageConfig.new, JobConfig.new))
-    presenter = ApiV1::Config::ArtifactRepresenter.new(plan)
+    presenter   = ApiV1::Config::ArtifactRepresenter.new(plan)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
     expect(actual_json).to eq(test_artifact_with_errors)
   end
 
   def test_artifact_with_errors
-    {   source: nil, destination: "../foo", type: "test",
-        errors: {
-          destination: ["Invalid destination path. Destination path should match the pattern ([^. ].+[^. ])|([^. ][^. ])|([^. ])"],
-          source: ["Job 'null' has an artifact with an empty source"]
-        }
+    {source: nil, destination: '../foo', type: 'test',
+     errors: {
+       destination: ['Invalid destination path. Destination path should match the pattern ([^. ].+[^. ])|([^. ][^. ])|([^. ])'],
+       source:      ["Job 'null' has an artifact with an empty source"]
+     }
     }
   end
 
   def build_artifact_hash
     {
-        source: "target/dist.jar",
-        destination: "pkg",
-        type: "build"
+      source:      'target/dist.jar',
+      destination: 'pkg',
+      type:        'build'
     }
   end
 
   def build_artifact_hash_with_errors
     {
-        source: nil,
-        destination: "../foo",
-        type: "build",
-        errors: {
-          source: ["Job 'null' has an artifact with an empty source"],
-          destination: ["Invalid destination path. Destination path should match the pattern "+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN]
-        }
+      source:      nil,
+      destination: '../foo',
+      type:        'build',
+      errors:      {
+        source:      ["Job 'null' has an artifact with an empty source"],
+        destination: ['Invalid destination path. Destination path should match the pattern '+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN]
+      }
     }
   end
 
   def test_artifact_hash
     {
-        source: "target/reports/**/*Test.xml",
-        destination: "reports",
-        type: "test"
+      source:      'target/reports/**/*Test.xml',
+      destination: 'reports',
+      type:        'test'
     }
   end
 
+
   def test_artifact_hash_with_errors
     {
-        source: nil,
-        destination: "../foo",
-        type: "test",
-        errors: {
-          source: ["Job 'null' has an artifact with an empty source"],
-          destination: ["Invalid destination path. Destination path should match the pattern "+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN]
-        }
+      source:      nil,
+      destination: '../foo',
+      type:        'test',
+      errors:      {
+        source:      ["Job 'null' has an artifact with an empty source"],
+        destination: ['Invalid destination path. Destination path should match the pattern '+ com.thoughtworks.go.config.validation.FilePathTypeValidator::PATH_PATTERN]
+      }
     }
   end
 end

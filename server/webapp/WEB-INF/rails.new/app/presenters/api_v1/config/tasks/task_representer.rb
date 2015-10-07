@@ -18,38 +18,42 @@ module ApiV1
   module Config
     module Tasks
       class TaskRepresenter < ApiV1::BaseRepresenter
+
+        TASK_TYPE_TO_REPRESENTER_MAP = {
+          ExecTask::TYPE  => ExecTaskRepresenter,
+          AntTask::TYPE   => AntTaskRepresenter,
+          NantTask::TYPE  => NantTaskRepresenter,
+          RakeTask::TYPE  => RakeTaskRepresenter,
+          FetchTask::TYPE => FetchTaskRepresenter
+        }
+
+        TASK_TYPE_TO_TASK_CLASS_MAP = {
+          ExecTask::TYPE   => ExecTask,
+          AntTask::TYPE    => AntTask,
+          NantTask::TYPE   => NantTask,
+          RakeTask::TYPE   => RakeTask,
+          FetchTask::TYPE  => FetchTask,
+          "pluggable_task" => PluggableTask,
+        }
+
         alias_method :task, :represented
         property :type, exec_context: :decorator, skip_parse: true
 
         nested :attributes,
-               skip_parse:           lambda { |fragment, options|
+               skip_parse: lambda { |fragment, options|
                  !fragment.respond_to?(:has_key?) || fragment.empty?
                },
-                 decorator: lambda { |task, *|
-                   if task.instance_of? PluggableTask
-                     PluggableTaskRepresenter
-                   else
-                     case task.getTaskType()
-                       when ExecTask::TYPE
-                         ExecTaskRepresenter
-                       when AntTask::TYPE
-                         AntTaskRepresenter
-                       when NantTask::TYPE
-                         NantTaskRepresenter
-                       when RakeTask::TYPE
-                         RakeTaskRepresenter
-                       when FetchTask::TYPE
-                         FetchTaskRepresenter
-                       else
-                         raise UnprocessableEntity, "Invalid Task type: #{hash['type']||hash[:type]}. It can be one of '{pluggable_task, exec, Ant, nant, rake, fetch}'"
-                     end
-                   end
-                 }
+               decorator:  lambda { |task, *|
+                 if task.instance_of? PluggableTask
+                   PluggableTaskRepresenter
+                 else
+                   TASK_TYPE_TO_REPRESENTER_MAP[task.getTaskType()]
+                 end
+               }
         property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
         def type
-          return "pluggable_task" if task.instance_of? PluggableTask
-          task.getTaskType
+          (task.instance_of? PluggableTask) ? 'pluggable_task' : task.getTaskType
         end
 
         def task_attributes
@@ -60,6 +64,20 @@ module ApiV1
           @represented = value
         end
 
+        class << self
+          def from_hash(hash, options={})
+            task_type = hash[:type]
+            if task_klass = task_class_for_type(task_type)
+              representer = TaskRepresenter.new(task_klass.new)
+              representer.from_hash(hash, options)
+              representer
+            end
+          end
+
+          def task_class_for_type(task_type)
+            TASK_TYPE_TO_TASK_CLASS_MAP[task_type] || (raise ApiV1::UnprocessableEntity, "Invalid task type '#{task_type}'. It has to be one of '#{TASK_TYPE_TO_TASK_CLASS_MAP.keys.join(', ')}.'")
+          end
+        end
       end
     end
   end

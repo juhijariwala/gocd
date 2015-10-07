@@ -20,16 +20,47 @@ require 'roar/json/hal'
 
 module ApiV1
   class BaseRepresenter < Roar::Decorator
+    include Representable::Hash
+    include Representable::Hash::AllowSymbols
+
     include Roar::JSON::HAL
     include JavaImports
 
+    class_attribute :collection_items
+
     class <<self
       def property(name, options={})
-        if (options[:skip_nil])
-          super
-        else
-          super(name, options.merge!(render_nil: true))
+        if options[:case_insensitive_string]
+          options.merge!({
+                           getter: lambda { |options|
+                             self.send(name).to_s if self.send(name)
+                           },
+                           setter: lambda { |value, options|
+                             self.send(:"#{name}=", com.thoughtworks.go.config.CaseInsensitiveString.new(value)) if value
+                           }
+                         })
         end
+
+        if options[:collection]
+          self.collection_items ||= []
+          self.collection_items << name
+        end
+
+        if options[:expect_hash]
+          options[:skip_parse] = lambda { |fragment, options|
+            if fragment.respond_to?(:has_key?)
+              false
+            else
+              raise ApiV1::UnprocessableEntity, "Expected #{name} to contain an object, got a #{fragment.class} instead!"
+            end
+          }
+        end
+
+        unless (options[:skip_nil])
+          options.merge!(render_nil: true)
+        end
+
+        super(name, options)
       end
     end
 
@@ -37,8 +68,21 @@ module ApiV1
       super.deep_symbolize_keys
     end
 
-    def from_hash(hash, options={})
-      super(hash.deep_stringify_keys, options) if hash
+    def from_hash(data, options={})
+      super(with_default_values(data), options)
+    end
+
+    private
+    def with_default_values(hash)
+      hash = (hash || {}).deep_symbolize_keys
+      if self.collection_items.blank?
+        hash
+      else
+        self.collection_items.inject(hash) do |memo, item|
+          memo[item] ||= []
+          memo
+        end
+      end
     end
   end
 end

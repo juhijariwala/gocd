@@ -20,7 +20,11 @@ module ApiV1
 
     property :timer_spec, as: :spec
     property :onlyOnChanges , as: :only_on_changes
-    property :errors, exec_context: :decorator, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
+    property :errors,
+             exec_context: :decorator,
+             decorator: ApiV1::Config::ErrorRepresenter,
+             skip_parse: true,
+             skip_render: lambda { |object, options| object.empty? }
 
     def errors
       mapped_errors = {}

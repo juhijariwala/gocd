@@ -16,146 +16,406 @@
 
 require 'spec_helper'
 
-def pipeline_with_template
-  pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "${COUNT}", nil, true, MaterialConfigsMother.defaultMaterialConfigs(), ArrayList.new)
-  pipeline_config.setTemplateName(CaseInsensitiveString.new("template1"))
-  pipeline_config
-end
-
 describe ApiV1::Config::PipelineConfigRepresenter do
-  it 'renders a pipeline with hal representation' do
-    presenter   = ApiV1::Config::PipelineConfigRepresenter.new(get_pipeline_config)
-    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
-    expect(actual_json).to have_links(:self, :find, :doc)
-    expect(actual_json).to have_link(:self).with_url('http://test.host/api/admin/pipelines/wunderbar')
-    expect(actual_json).to have_link(:find).with_url('http://test.host/api/admin/pipelines/:name')
-    expect(actual_json).to have_link(:doc).with_url('http://api.go.cd/#pipeline_config')
-    actual_json.delete(:_links)
-    expect(actual_json).to eq(pipeline_hash)
+  describe :serialize do
+    it 'renders a pipeline with hal representation' do
+      presenter   = ApiV1::Config::PipelineConfigRepresenter.new(get_pipeline_config)
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+
+      expect(actual_json).to have_links(:self, :find, :doc)
+      expect(actual_json).to have_link(:self).with_url('http://test.host/api/admin/pipelines/wunderbar')
+      expect(actual_json).to have_link(:find).with_url('http://test.host/api/admin/pipelines/:name')
+      expect(actual_json).to have_link(:doc).with_url('http://api.go.cd/#pipeline_config')
+      actual_json.delete(:_links)
+      expect(actual_json).to eq(pipeline_hash)
+    end
+
+    it 'should serialize pipeline with template' do
+      pipeline_config = pipeline_with_template
+      presenter       = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
+      actual_json     = presenter.to_hash(url_builder: UrlBuilder.new)
+      actual_json.delete(:_links)
+      expect(actual_json).to eq(pipeline_with_template_hash)
+    end
+
+    def pipeline_with_template_hash
+      {
+        label_template:          "${COUNT}",
+        enable_pipeline_locking: false,
+        name:                    "wunderbar",
+        template:                "template1",
+        params:                  [],
+        environment_variables:   [],
+        materials:               pipeline_with_template.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
+        stages:                  nil,
+        tracking_tool:           nil,
+        timer:                   nil
+      }
+    end
+
+    def pipeline_with_template
+      pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "${COUNT}", nil, true, MaterialConfigsMother.defaultMaterialConfigs(), ArrayList.new)
+      pipeline_config.setTemplateName(CaseInsensitiveString.new("template1"))
+      pipeline_config
+    end
   end
 
-  it 'should serialize pipeline with template' do
-    pipeline_config = pipeline_with_template
-    presenter = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
-    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+  describe :deserialise do
 
-    actual_json.delete(:_links)
-    expect(actual_json).to eq(pipeline_with_template_hash)
+    it "should convert from minimal json to PipelineConfig" do
+      pipeline_config = PipelineConfig.new
+
+      ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(pipeline_hash_basic)
+      expect(pipeline_config.name.to_s).to eq("wunderbar")
+      expect(pipeline_config.getParams.isEmpty).to eq(true)
+      expect(pipeline_config.variables.isEmpty).to eq(true)
+    end
+
+    def pipeline_hash_basic
+      {
+        label_template:          "foo-1.0.${COUNT}-${svn}",
+        enable_pipeline_locking: false,
+        name:                    "wunderbar",
+        materials:               [
+                                   {
+                                     type:        "SvnMaterial",
+                                     attributes:  {
+                                       url:             "http://some/svn/url",
+                                       destination:     "svnDir",
+                                       check_externals: false
+                                     },
+                                     name:        "http___some_svn_url",
+                                     auto_update: true
+                                   }
+                                 ],
+        stages:                  [
+                                   {
+                                     name:                    "stage1",
+                                     fetch_materials:         true,
+                                     clean_working_directory: false,
+                                     never_cleanup_artifacts: false,
+                                     jobs:                    [
+                                                                {
+                                                                  name:  "defaultJob",
+                                                                  tasks: [
+                                                                           {
+                                                                             type:       "ant",
+                                                                             attributes: {
+                                                                               working_dir: "working-directory",
+                                                                               build_file:  "build-file",
+                                                                               target:      "target"
+                                                                             }
+                                                                           }
+                                                                         ]
+                                                                }
+                                                              ]
+                                   }
+                                 ],
+      }
+    end
+
+    describe :pipeline_with_environment_varibales do
+      it "should convert pipeline hash with environment variables  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+
+        environment_variables=[
+          {
+            name:   'plain',
+            value:  'plain',
+            secure: false
+          },
+          {
+            secure:          true,
+            name:            'secure',
+            encrypted_value: GoCipher.new.encrypt('confidential')
+          }
+        ]
+
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({environment_variables: environment_variables})
+        expect(pipeline_config.variables.map(&:name)).to eq(['plain', 'secure'])
+      end
+
+      it "should convert pipeline hash with empty environment variables  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({environment_variables: []})
+        expect(pipeline_config.variables.size).to eq(0)
+      end
+    end
+
+    describe :pipeline_with_parmas do
+      it "should convert pipeline hash with params  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({params: [{
+                                                                                            name:  "command",
+                                                                                            value: "echo"
+                                                                                          }, {
+                                                                                            name:  "command",
+                                                                                            value: "sleep"
+                                                                                          }]})
+        expect(pipeline_config.getParams.map(&:name)).to eq(['command', 'command'])
+      end
+
+      it "should convert pipeline hash with empty parmas  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({params: nil})
+        expect(pipeline_config.getParams.size).to eq(0)
+      end
+    end
+
+    describe :pipeline_with_materials do
+      it "should convert pipeline hash with materials  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({materials: [
+                                                                                              {
+                                                                                                type:       GitMaterialConfig::TYPE,
+                                                                                                attributes: {
+                                                                                                  url:              "http://user:password@funk.com/blank",
+                                                                                                  destination:      "destination",
+                                                                                                  filter:           {
+                                                                                                    ignore: %w(**/*.html **/foobar/)
+                                                                                                  },
+                                                                                                  branch:           'branch',
+                                                                                                  submodule_folder: 'sub_module_folder',
+                                                                                                  name:             'AwesomeGitMaterial',
+                                                                                                  auto_update:      false
+                                                                                                }
+                                                                                              },
+                                                                                              {
+                                                                                                type:       SvnMaterialConfig::TYPE,
+                                                                                                attributes: {
+                                                                                                  url:                "url",
+                                                                                                  destination:        "svnDir",
+                                                                                                  filter:             {
+                                                                                                    ignore: [
+                                                                                                              "*.doc"
+                                                                                                            ]
+                                                                                                  },
+                                                                                                  name:               "svn-material",
+                                                                                                  auto_update:        false,
+                                                                                                  check_externals:    true,
+                                                                                                  username:           "user",
+                                                                                                  encrypted_password: GoCipher.new.encrypt("pass")
+                                                                                                }
+                                                                                              }
+                                                                                            ]})
+        expect(pipeline_config.materialConfigs.map(&:type)).to eq(['GitMaterial', 'SvnMaterial'])
+      end
+
+      it "should convert pipeline hash with empty materials  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({materials: nil})
+        expect(pipeline_config.materialConfigs.size).to eq(0)
+      end
+
+      it 'should raise exception when passing invalid material type' do
+        hash             = pipeline_hash_basic
+        hash[:materials] = [{type: 'bad-material-type', attributes: {foo: 'bar'}}]
+        pipeline_config  = PipelineConfig.new
+
+        expect do
+          ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(hash)
+        end.to raise_error(ApiV1::UnprocessableEntity, /Invalid material type 'bad-material-type'. It has to be one of/)
+      end
+
+    end
+
+    describe :pipeline_with_stages do
+      it "should convert pipeline hash with stages  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        stages          =[{
+                            name:                    'stage1',
+                            fetch_materials:         true,
+                            clean_working_directory: false,
+                            never_cleanup_artifacts: false,
+                            approval:                {
+                              type:          'success',
+                              authorization: {
+                                roles: [],
+                                users: []
+                              }
+                            },
+                            environment_variables:   [
+                                                       {
+                                                         name:   'plain',
+                                                         value:  'plain',
+                                                         secure: false
+                                                       },
+                                                       {
+                                                         secure:          true,
+                                                         name:            'secure',
+                                                         encrypted_value: GoCipher.new.encrypt('confidential')
+                                                       }
+                                                     ],
+                            jobs:                    [{
+                                                        name:               'some-job',
+                                                        run_on_all_agents:  true,
+                                                        run_instance_count: '3',
+                                                        timeout:            '100',
+                                                      }]
+                          }]
+
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({stages: stages})
+        expect(pipeline_config.getStages.map(&:name).map(&:to_s)).to eq(['stage1'])
+        expect(pipeline_config.getStages.first.getJobs.map(&:name).map(&:to_s)).to eq(['some-job'])
+        expect(pipeline_config.getStages.first.variables.map(&:name)).to eq(['plain', 'secure'])
+
+      end
+
+      it "should convert pipeline hash with empty stages  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({stages: nil})
+        expect(pipeline_config.getStages.size).to eq(0)
+      end
+
+    end
+
+    describe :pipeline_with_tracking_tool do
+      it "should convert pipeline hash with tracking tool  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({tracking_tool: {
+                                                                                  type:       "external",
+                                                                                  attributes: {
+                                                                                    link:  "link",
+                                                                                    regex: "regex"
+                                                                                  }
+                                                                                }})
+        expect(pipeline_config.getTrackingTool.getLink).to eq('link')
+        expect(pipeline_config.getTrackingTool.getRegex).to eq('regex')
+      end
+
+      it 'should raise exception when passing invalid tracking tool type' do
+        pipeline_config = PipelineConfig.new
+        expect do
+          ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({tracking_tool: {
+                                                                                    type:       "bad-tracking-tool",
+                                                                                    attributes: {
+                                                                                      link:  "link",
+                                                                                      regex: "regex"
+                                                                                    }
+                                                                                  }})
+        end.to raise_error(ApiV1::UnprocessableEntity, /Invalid Tracking Tool type 'bad-tracking-tool'. It has to be one of/)
+      end
+
+
+    end
+
+    it "should convert from full blown document to PipelineConfig" do
+      pipeline_config = PipelineConfig.new
+
+      ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(pipeline_hash)
+      expect(pipeline_config).to eq(get_pipeline_config)
+    end
+
+
+    describe :pipeline_with_timer do
+      it "should convert pipeline hash with timer  to PipelineConfig" do
+        pipeline_config = PipelineConfig.new
+        ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({timer: {spec: "0 0 22 ? * MON-FRI", only_on_changes: true}})
+        expect(pipeline_config.getTimer.getOnlyOnChanges).to eq(true)
+      end
+    end
+
+    it "should render errors" do
+      pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "", "", true, nil, ArrayList.new)
+      pipeline_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain(pipeline_config))
+
+      presenter   = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+      actual_json.delete(:_links)
+      expect(actual_json).to eq(expected_hash_with_errors)
+    end
+
+    it "should render errors on nested objects" do
+      pipeline_config = get_invalid_pipeline_config
+      PipelineConfigurationCache::getInstance().onConfigChange(BasicCruiseConfig.new(BasicPipelineConfigs.new(get_pipeline_config)));
+      pipeline_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain(pipeline_config))
+
+      presenter   = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+      actual_json.delete(:_links)
+      expect(actual_json).to eq(expected_hash_with_nested_errors)
+    end
+
   end
 
-  it "should convert from full blown document to PipelineConfig" do
-    pipeline_config = PipelineConfig.new
-
-    ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(pipeline_hash)
-    expect(pipeline_config).to eq(get_pipeline_config)
-  end
-
-  it "should convert from minimal json to PipelineConfig" do
-    pipeline_config = PipelineConfig.new
-
-    ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash(pipeline_hash_basic)
-    expect(pipeline_config.name.to_s).to eq("wunderbar")
-    expect(pipeline_config.getParams.isEmpty).to eq(true)
-    expect(pipeline_config.variables.isEmpty).to eq(true)
-  end
-
-  it "should render errors" do
-    pipeline_config  = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "", "", true, nil, ArrayList.new)
-    pipeline_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain(pipeline_config))
-
-    presenter   = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
-    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-    actual_json.delete(:_links)
-    expect(actual_json).to eq(expected_hash_with_errors)
-  end
-
-  it "should render errors on nested objects" do
-    pipeline_config  = get_invalid_pipeline_config
-    PipelineConfigurationCache::getInstance().onConfigChange(BasicCruiseConfig.new(BasicPipelineConfigs.new(get_pipeline_config)));
-    pipeline_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain(pipeline_config))
-
-    presenter   = ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config)
-    actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-    actual_json.delete(:_links)
-    expect(actual_json).to eq(expected_hash_with_nested_errors)
-  end
 
   def expected_hash_with_errors
     {
-        label_template:          "",
-        enable_pipeline_locking: false,
-        name:                    "wunderbar",
-        template: nil,
-        params: [],
-        environment_variables: [],
-        materials:               [],
-        stages:                  nil,
-        tracking_tool:           nil,
-        timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax"]}},
-        errors: {
-           materials: ["A pipeline must have at least one material"],
-           base:["Pipeline \"wunderbar\" does not exist."],
-           labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."],
-           stages: ["A pipeline must have at least one stage"]
-        }
+      label_template:          "",
+      enable_pipeline_locking: false,
+      name:                    "wunderbar",
+      template:                nil,
+      params:                  [],
+      environment_variables:   [],
+      materials:               [],
+      stages:                  nil,
+      tracking_tool:           nil,
+      timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax"]}},
+      errors:                  {
+        materials:     ["A pipeline must have at least one material"],
+        labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."],
+        stages:        ["A pipeline must have at least one stage"]
+      }
     }
   end
 
   def expected_hash_with_nested_errors
     {
-        label_template:          "foo-1.0.${COUNT}-${svn}",
-        enable_pipeline_locking: false,
-        name:                    "wunderbar",
-        template: nil,
-        params: [
-          {
-              name: nil, value: "echo",
-              errors: {
-                name: [
-                  "Parameter cannot have an empty name for pipeline 'wunderbar'.",
-                  "Invalid parameter name 'null'. This must be alphanumeric and can contain underscores and periods (however, it cannot start with a period). The maximum allowed length is 255 characters."
-                ]
-              }
-          }
-        ],
-        environment_variables: [],
-        materials: [
-          {
-              type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
-          },
-          {
-              type: "GitMaterial", attributes: {url: nil, destination: nil, filter: nil, name: nil, auto_update: true, branch: "master", submodule_folder: nil},
-              errors: {folder: ["Destination directory is required when specifying multiple scm materials"], url: ["URL cannot be blank"]}
-          }
-        ],
-        stages:  [{name: "stage1", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {}},environment_variables: [], jobs: []}],
-        timer: {spec: "0 0 22 ? * MON-FRI", only_on_changes: true},
-        tracking_tool: {
-          type: "external", attributes: {link: "", regex: ""},
-          errors: {
-            link: ["Link should be populated", "Link must be a URL containing '${ID}'. Go will replace the string '${ID}' with the first matched group from the regex at run-time."],
-            regex: ["Regex should be populated"]
-          }
-        },
+      label_template:          "foo-1.0.${COUNT}-${svn}",
+      enable_pipeline_locking: false,
+      name:                    "wunderbar",
+      template:                nil,
+      params:                  [
+                                 {
+                                   name:   nil, value: "echo",
+                                   errors: {
+                                     name: [
+                                             "Parameter cannot have an empty name for pipeline 'wunderbar'.",
+                                             "Invalid parameter name 'null'. This must be alphanumeric and can contain underscores and periods (however, it cannot start with a period). The maximum allowed length is 255 characters."
+                                           ]
+                                   }
+                                 }
+                               ],
+      environment_variables:   [],
+      materials:               [
+                                 {
+                                   type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
+                                 },
+                                 {
+                                   type:   "GitMaterial", attributes: {url: nil, destination: nil, filter: nil, name: nil, auto_update: true, branch: "master", submodule_folder: nil},
+                                   errors: {folder: ["Destination directory is required when specifying multiple scm materials"], url: ["URL cannot be blank"]}
+                                 }
+                               ],
+      stages:                  [{name: "stage1", fetch_materials: true, clean_working_directory: false, never_cleanup_artifacts: false, approval: {type: "success", authorization: {:roles => [], :users => []}}, environment_variables: [], jobs: []}],
+      timer:                   {spec: "0 0 22 ? * MON-FRI", only_on_changes: true},
+      tracking_tool:           {
+        type:   "external", attributes: {link: "", regex: ""},
         errors: {
-           labelTemplate: ["You have defined a label template in pipeline wunderbar that refers to a material called svn, but no material with this name is defined."]
+          regex: ["Regex should be populated"],
+          link:  ["Link should be populated", "Link must be a URL containing '${ID}'. Go will replace the string '${ID}' with the first matched group from the regex at run-time."]
+
         }
+      },
+      errors:                  {
+        labelTemplate: ["You have defined a label template in pipeline wunderbar that refers to a material called svn, but no material with this name is defined."]
+      }
     }
   end
 
   def get_invalid_pipeline_config
     material_configs = MaterialConfigsMother.defaultMaterialConfigs()
-    git = GitMaterialConfig.new
+    git              = GitMaterialConfig.new
     git.setFolder(nil);
     material_configs.add(git);
 
-    pipeline_config  = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "foo-1.0.${COUNT}-${svn}", "0 0 22 ? * MON-FRI", true, material_configs, ArrayList.new)
+    pipeline_config = PipelineConfig.new(CaseInsensitiveString.new("wunderbar"), "foo-1.0.${COUNT}-${svn}", "0 0 22 ? * MON-FRI", true, material_configs, ArrayList.new)
     pipeline_config.addParam(ParamConfig.new(nil, "echo"))
     pipeline_config.add(StageConfigMother.stageConfig("stage1"))
     pipeline_config.setTrackingTool(TrackingTool.new())
     pipeline_config
   end
+
 
   def get_pipeline_config
     material_configs = MaterialConfigsMother.defaultMaterialConfigs()
@@ -173,7 +433,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
       label_template:          "foo-1.0.${COUNT}-${svn}",
       enable_pipeline_locking: false,
       name:                    "wunderbar",
-      template: nil,
+      template:                nil,
       params:                  get_pipeline_config.getParams().collect { |j| ApiV1::Config::ParamRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       environment_variables:   get_pipeline_config.variables().collect { |j| ApiV1::Config::EnvironmentVariableRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       materials:               get_pipeline_config.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
@@ -181,64 +441,6 @@ describe ApiV1::Config::PipelineConfigRepresenter do
       tracking_tool:           ApiV1::Config::TrackingTool::TrackingToolRepresenter.new(get_pipeline_config.getTrackingTool).to_hash(url_builder: UrlBuilder.new),
       timer:                   ApiV1::Config::TimerRepresenter.new(get_pipeline_config.getTimer).to_hash(url_builder: UrlBuilder.new)
     }
-  end
-
-  def pipeline_with_template_hash
-    {
-      label_template: "${COUNT}",
-      enable_pipeline_locking: false,
-      name:                    "wunderbar",
-      template:                "template1",
-      params: [],
-      environment_variables:[],
-      materials:               pipeline_with_template.materialConfigs().collect { |j| ApiV1::Config::Materials::MaterialRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
-      stages: nil,
-      tracking_tool: nil,
-      timer: nil
-    }
-  end
-
-  def pipeline_hash_basic
-{
-    label_template: "foo-1.0.${COUNT}-${svn}",
-    enable_pipeline_locking: false,
-    name: "wunderbar",
-    materials: [
-        {
-            type: "SvnMaterial",
-            attributes: {
-                url: "http://some/svn/url",
-                destination: "svnDir",
-                check_externals: false
-            },
-            name: "http___some_svn_url",
-            auto_update: true
-        }
-    ],
-    stages: [
-        {
-            name: "stage1",
-            fetch_materials: true,
-            clean_working_directory: false,
-            never_cleanup_artifacts: false,
-            jobs: [
-                {
-                    name: "defaultJob",
-                    tasks: [
-                        {
-                            type: "ant",
-                            attributes: {
-                                working_dir: "working-directory",
-                                build_file: "build-file",
-                                target: "target"
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
-    ],
-}
   end
 
 

@@ -19,103 +19,181 @@ require 'spec_helper'
 describe ApiV1::Config::Tasks::TaskRepresenter do
   include TaskMother
 
-  describe "exec task" do
-    before(:each) do
-      @task      = with_run_if(RunIfConfig::PASSED, with_run_if(RunIfConfig::FAILED, simple_exec_task_with_args_list))
-      @presenter = ApiV1::Config::Tasks::TaskRepresenter.new(@task)
+  shared_examples_for 'tasks' do
+
+    describe :serialize do
+      it 'should render task with hal representation' do
+        presenter          = ApiV1::Config::Tasks::TaskRepresenter.new(existing_task)
+        actual_json        = presenter.to_hash(url_builder: UrlBuilder.new)
+        expected_task_hash = task_hash
+        expect(actual_json).to eq(expected_task_hash)
+      end
+
+      it 'should render task with hal representation with run_if' do
+        run_if_config                            = [RunIfConfig::PASSED, RunIfConfig::FAILED, RunIfConfig::ANY].sample
+        presenter                                = ApiV1::Config::Tasks::TaskRepresenter.new(with_run_if(run_if_config, existing_task))
+        actual_json                              = presenter.to_hash(url_builder: UrlBuilder.new)
+        expected_task_hash                       = task_hash
+        expected_task_hash[:attributes][:run_if] = [run_if_config.to_s]
+        expect(actual_json).to eq(expected_task_hash)
+      end
+
+      it 'should render task with hal representation with oncancel' do
+        on_cancel_task = ant_task('build.xml', 'package', 'hero/ka/directory')
+        existing_task.setCancelTask(on_cancel_task)
+        presenter                                   = ApiV1::Config::Tasks::TaskRepresenter.new(existing_task)
+        actual_json                                 = presenter.to_hash(url_builder: UrlBuilder.new)
+        expected_task_hash                          = task_hash
+        expected_task_hash[:attributes][:on_cancel] = ApiV1::Config::Tasks::OnCancelRepresenter.new(existing_task.getOnCancelConfig).to_hash(url_builder: UrlBuilder.new)
+        expect(actual_json).to eq(expected_task_hash)
+      end
     end
 
-    it 'should render exec task with hal representation' do
-      actual_json = @presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(exec_task_hash)
-    end
+    describe :deserialize do
+      it 'should convert hash to Task' do
+        new_task = task_type.new
 
-    it 'should render exec task with and on-cancel task hal representation' do
-      @task.setCancelTask(simple_exec_task_with_args_list)
-      actual_json = @presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(exec_task_hash_with_on_cancel)
-    end
+        presenter = ApiV1::Config::Tasks::TaskRepresenter.new(new_task)
+        presenter.from_hash(ApiV1::Config::Tasks::TaskRepresenter.new(existing_task).to_hash(url_builder: UrlBuilder.new))
 
-    it "should convert hash to ExecTask" do
-      presenter = ApiV1::Config::Tasks::TaskRepresenter.new(ExecTask.new)
-      presenter.from_hash(exec_task_hash)
-      expect(presenter.represented).to eq(@task)
+        expect(new_task).to eq(existing_task)
+      end
+
+      it 'should convert hash with run_if to Task with run_if' do
+        new_task = task_type.new
+
+        run_if_config    = [RunIfConfig::PASSED, RunIfConfig::FAILED, RunIfConfig::ANY].sample
+        task_with_run_if = with_run_if(run_if_config, existing_task)
+
+        presenter = ApiV1::Config::Tasks::TaskRepresenter.new(new_task)
+        presenter.from_hash(ApiV1::Config::Tasks::TaskRepresenter.new(task_with_run_if).to_hash(url_builder: UrlBuilder.new))
+
+        expect(new_task).to eq(task_with_run_if)
+      end
+
+      it 'should convert hash with oncancel to Task with oncancel' do
+        on_cancel_task = ant_task('build.xml', 'package', 'hero/ka/directory')
+        existing_task.setCancelTask(on_cancel_task)
+
+        new_task = task_type.new
+
+        presenter = ApiV1::Config::Tasks::TaskRepresenter.new(new_task)
+        presenter.from_hash(ApiV1::Config::Tasks::TaskRepresenter.new(existing_task).to_hash(url_builder: UrlBuilder.new))
+
+        expect(new_task).to eq(existing_task)
+      end
     end
   end
 
+  describe :exec do
+    it_should_behave_like 'tasks'
+
+    def existing_task
+      @task ||= simple_exec_task_with_args_list
+    end
+
+    def task_type
+      ExecTask
+    end
+
+    def task_hash
+      {
+        type:       'exec',
+        attributes: {
+          command:           'ls',
+          arguments:         ['-l', '-a'],
+          working_directory: 'hero/ka/directory'
+        }
+      }
+    end
+
+  end
 
   describe :ant do
-    before(:each) do
-      @ant = with_run_if(RunIfConfig::PASSED, with_run_if(RunIfConfig::FAILED, ant_task("build.xml", "package", "hero/ka/directory")))
+    it_should_behave_like 'tasks'
+
+    def existing_task
+      @task ||= ant_task('build.xml', 'package', 'hero/ka/directory')
     end
 
-    it 'should render ant task with hal representation' do
-      presenter   = ApiV1::Config::Tasks::TaskRepresenter.new(@ant)
-      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(ant_task_hash)
+    def task_type
+      AntTask
     end
 
-    it "should convert hash to AntTask" do
-      presenter = ApiV1::Config::Tasks::TaskRepresenter.new(AntTask.new)
-      presenter.from_hash(ant_task_hash)
-      expect(presenter.represented).to eq(@ant)
+    def task_hash
+      {
+        type:       'ant',
+        attributes: {
+          working_directory: 'hero/ka/directory',
+          build_file:        'build.xml',
+          target:            'package'
+        }
+      }
     end
   end
 
   describe :nant do
-    before(:each) do
-      @nant = with_run_if(RunIfConfig::PASSED, with_run_if(RunIfConfig::FAILED, nant_task("build.xml", "package", "hero/ka/directory")))
-    end
-    it 'should render nant task with hal representation' do
-      presenter   = ApiV1::Config::Tasks::TaskRepresenter.new(@nant)
-      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(nant_task_hash)
+    it_should_behave_like 'tasks'
+
+    def task_type
+      NantTask
     end
 
-    it "should convert hash to NantTask" do
-      presenter = ApiV1::Config::Tasks::TaskRepresenter.new(NantTask.new)
-      presenter.from_hash(nant_task_hash)
-      expect(presenter.represented).to eq(@nant)
+    def existing_task
+      @task ||=nant_task('build.xml', 'package', 'hero/ka/directory')
     end
 
+    def task_hash
+      {
+        type:       'nant',
+        attributes: {
+          build_file:        'build.xml',
+          target:            'package',
+          working_directory: 'hero/ka/directory',
+          nant_path:         nil
+        }
+      }
+    end
   end
 
   describe :rake do
-    before(:each) do
-      @rake = with_run_if(RunIfConfig::PASSED, with_run_if(RunIfConfig::FAILED, rake_task("build.xml", "package", "hero/ka/directory")))
-    end
-    it 'should render rake task with hal representation' do
+    it_should_behave_like 'tasks'
 
-      presenter   = ApiV1::Config::Tasks::TaskRepresenter.new(@rake)
-      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(rake_task_hash)
-    end
-    it "should convert hash to RakeTask" do
-      presenter = ApiV1::Config::Tasks::TaskRepresenter.new(RakeTask.new)
-      presenter.from_hash(rake_task_hash)
-      expect(presenter.represented).to eq(@rake)
+    def existing_task
+      @task ||= rake_task('rakefile', 'package', 'hero/ka/directory')
     end
 
+    def task_type
+      RakeTask
+    end
+
+    def task_hash
+      {
+        type:       'rake',
+        attributes: {
+          build_file:        'rakefile',
+          target:            'package',
+          working_directory: 'hero/ka/directory',
+        }
+      }
+    end
   end
 
   describe :fetch do
-    before(:each) do
-      @fetch = with_run_if(RunIfConfig::PASSED, with_run_if(RunIfConfig::FAILED, fetch_task()))
-    end
-    it 'should render fetch task with hal representation' do
-      presenter   = ApiV1::Config::Tasks::TaskRepresenter.new(@fetch)
-      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(fetch_task_hash)
-    end
-    it "should convert hash to FetchTask" do
-      presenter = ApiV1::Config::Tasks::TaskRepresenter.new(FetchTask.new)
-      presenter.from_hash(fetch_task_hash)
-      expect(presenter.represented).to eq(@fetch)
+
+    it_should_behave_like 'tasks'
+
+    def existing_task
+      @task ||= fetch_task
     end
 
-    it "should represent errors" do
-      fetch_task = FetchTask.new(CaseInsensitiveString.new(""), CaseInsensitiveString.new(""), CaseInsensitiveString.new(""), nil, nil)
-      validation_context = double("ValidationContext")
+    def task_type
+      FetchTask
+    end
+
+    it 'should represent errors' do
+      fetch_task         = FetchTask.new(CaseInsensitiveString.new(''), CaseInsensitiveString.new(''), CaseInsensitiveString.new(''), nil, nil)
+      validation_context = double('ValidationContext')
       validation_context.stub(:isWithinPipelines).and_return(false)
       fetch_task.validateTree(validation_context)
 
@@ -126,224 +204,89 @@ describe ApiV1::Config::Tasks::TaskRepresenter do
 
     def errors_hash
       {
-          type: "fetch",
-          attributes: {pipeline: nil, stage: nil, job: nil, is_source_a_file: false, source: nil, destination: ""},
-          errors: {
-          job: ["Job is a required field."],
-          src: ["Should provide either srcdir or srcfile"],
-          stage: ["Stage is a required field."]
-      }
+        type:       'fetch',
+        attributes: {pipeline: '', stage: '', job: '', is_source_a_file: false, source: nil, destination: ''},
+        errors:     {
+          job:   ['Job is a required field.'],
+          src:   ['Should provide either srcdir or srcfile'],
+          stage: ['Stage is a required field.']
+        }
       }
     end
+
+    def task_hash
+      {
+        type:       'fetch',
+        attributes: {
+          pipeline:         'pipeline',
+          stage:            'stage',
+          job:              'job',
+          source:           'src',
+          is_source_a_file: true,
+          destination:      'dest'
+        }
+      }
+    end
+
   end
 
   describe :pluggable do
+    it_should_behave_like 'tasks'
+
     before(:each) do
-      config          = [ConfigurationProperty.new(ConfigurationKey.new("simple_key"), ConfigurationValue.new("value")), ConfigurationProperty.new(ConfigurationKey.new("secure_key"), EncryptedConfigurationValue.new("encrypted"))]
-      @pluggable_task = with_run_if(RunIfConfig::PASSED, with_run_if(RunIfConfig::FAILED, simple_task_plugin_with_on_cancel_config("curl", config)))
-      @pluggable_task.setCancelTask(simple_exec_task_with_args_list)
-    end
+      task            = TaskMother::StubTask.new
+      simple_property = TaskConfigProperty.new('simple_key', 'simple-value')
+      secure_property = TaskConfigProperty.new('secure_key', 'secure-value').with(com.thoughtworks.go.plugin.api.config.Property::SECURE, true)
 
-    it 'should render pluggable task with hal representation' do
-
-      presenter   = ApiV1::Config::Tasks::TaskRepresenter.new(@pluggable_task)
-      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
-      expect(actual_json).to eq(pluggable_task_hash)
-    end
-
-    it "should convert hash to PluggableTask" do
-      store           = double("PluggableTaskConfigStore")
-      simple_property = TaskConfigProperty.new("simple_key", nil)
-      secure_property = TaskConfigProperty.new("secure_key", nil).with(com.thoughtworks.go.plugin.api.config.Property::SECURE, true)
-
-      task = TaskMother::StubTask.new
       task.config.add(simple_property)
       task.config.add(secure_property)
       task_preference = TaskPreference.new(task)
+      store           = double('PluggableTaskConfigStore')
       store.stub(:preferenceFor).with(anything).and_return(task_preference)
       PluggableTaskConfigStore.stub(:store).and_return(store)
+      # PluggableTaskConfigStore.store().preferenceFor(pluggable_task.plugin_configuration.getId())
+    end
 
-      foo       = PluggableTask.new
-      presenter = ApiV1::Config::Tasks::TaskRepresenter.new(foo)
-      presenter.from_hash(pluggable_task_hash_for_put)
-      expect(presenter.represented.configuration.get(0)).to eq(@pluggable_task.configuration.get(0))
-      expect(presenter.represented.configuration.get(1).getConfigurationKey.name).to eq(@pluggable_task.configuration.get(1).getConfigurationKey.name)
-      expect(presenter.represented.configuration.get(1).getEncryptedValue.value).to eq(GoCipher.new.encrypt("unencrypted_value"))
-      expect(presenter.represented.getPluginConfiguration).to eq(@pluggable_task.getPluginConfiguration)
-      expect(presenter.represented.getConditions).to eq(@pluggable_task.getConditions)
-      expect(presenter.represented.onCancelConfig.getTask).to eq(@pluggable_task.onCancelConfig.getTask)
-      expect(presenter.represented.onCancelConfig).to eq(@pluggable_task.onCancelConfig)
+    def existing_task
+      @task ||= begin
+        config = [
+          ConfigurationProperty.new(ConfigurationKey.new('simple_key'), ConfigurationValue.new('value')),
+          ConfigurationProperty.new(ConfigurationKey.new('secure_key'), EncryptedConfigurationValue.new('encrypted'))
+        ]
+        plugin_task('curl', config)
+      end
+    end
+
+    def task_type
+      PluggableTask
+    end
+
+    def task_hash
+      {
+        type:       'pluggable_task',
+        attributes: {
+          plugin_configuration: {
+            id:      'curl',
+            version: '1.0'
+          },
+          configuration:        [
+                                  {
+                                    key:   'simple_key',
+                                    value: 'value'
+                                  },
+                                  {
+                                    key:             'secure_key',
+                                    encrypted_value: 'encrypted'
+                                  }
+                                ]
+        }
+      }
     end
   end
 
-  def pluggable_task_hash_for_put
-    {
-      type:       "pluggable_task",
-      attributes: {
-        run_if:               ["failed", "passed"],
-        on_cancel:            {
-          type:       "exec",
-          attributes: {
-            command:     "ls",
-            arguments:   [
-                           "-l",
-                           "-a"
-                         ],
-            working_dir: "hero/ka/directory"
-          }
-        },
-        run_if:               ["failed", "passed"],
-        plugin_configuration: {
-          id:      "curl",
-          version: "1.0"
-        },
-        configuration:        [
-                                {
-                                  key:   "simple_key",
-                                  value: "value"
-                                },
-                                {
-                                  key:   "secure_key",
-                                  value: "unencrypted_value"
-                                }
-                              ]
-      }
-    }
-  end
-
-  def pluggable_task_hash
-    {
-      type:       "pluggable_task",
-      attributes: {
-        run_if:               ["failed", "passed"],
-        on_cancel:            {
-          type:       "exec",
-          attributes: {
-            command:     "ls",
-            arguments:   [
-                           "-l",
-                           "-a"
-                         ],
-            working_dir: "hero/ka/directory"
-          }
-        },
-        plugin_configuration: {
-          id:      "curl",
-          version: "1.0"
-        },
-        configuration:        [
-                                {
-                                  key:   "simple_key",
-                                  value: "value"
-                                },
-                                {
-                                  key:             "secure_key",
-                                  encrypted_value: "****"
-                                }
-                              ]
-      }
-    }
-  end
-
-  def fetch_task_hash
-    {
-      type:       "fetch",
-      attributes: {
-        run_if:           ["failed", "passed"],
-        on_cancel:        {
-          type:       "exec",
-          attributes: {
-            command:     "echo",
-            args:        "'failing'",
-            working_dir: "oncancel_working_dir"
-          }
-        },
-        pipeline:         "pipeline",
-        stage:            "stage",
-        job:              "job",
-        source:           "src",
-        is_source_a_file: true,
-        destination:      "dest"
-      }
-    }
-  end
-
-  def rake_task_hash
-    {
-      type:       "rake",
-      attributes: {
-        run_if:      ["failed", "passed"],
-        build_file:  "build.xml",
-        target:      "package",
-        working_dir: "hero/ka/directory",
-      }
-    }
-  end
-
-  def nant_task_hash
-    {
-      type:       "nant",
-      attributes: {
-        run_if:      ["failed", "passed"],
-        build_file:  "build.xml",
-        target:      "package",
-        working_dir: "hero/ka/directory",
-        nant_path:   nil
-      }
-    }
-  end
-
-  def ant_task_hash
-    {
-      type:       "ant",
-      attributes: {
-        run_if:      ["failed", "passed"],
-        working_dir: "hero/ka/directory",
-        build_file:  "build.xml",
-        target:      "package"
-
-      }
-    }
-  end
-
-  def exec_task_hash
-    {
-      type:       "exec",
-      attributes: {
-        run_if:      ["failed", "passed"],
-        command:     "ls",
-        arguments:   [
-                       "-l",
-                       "-a"
-                     ],
-        working_dir: "hero/ka/directory"
-      }
-    }
-  end
-
-  def exec_task_hash_with_on_cancel
-    {
-      type:       "exec",
-      attributes: {
-        run_if:      ["failed", "passed"],
-        on_cancel:   {
-          type:       "exec",
-          attributes: {
-            command:     "ls",
-            arguments:   [
-                           "-l",
-                           "-a"
-                         ],
-            working_dir: "hero/ka/directory"
-          }
-        },
-        command:     "ls",
-        arguments:   [
-                       "-l",
-                       "-a"
-                     ],
-        working_dir: "hero/ka/directory"
-      }
-    }
+  it 'should raise error when de-serializing a type that does not exist' do
+    expect do
+      ApiV1::Config::Tasks::TaskRepresenter.from_hash({type: :foo})
+    end.to raise_error(ApiV1::UnprocessableEntity, /Invalid task type 'foo'. It has to be one of/)
   end
 end

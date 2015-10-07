@@ -18,34 +18,20 @@ module ApiV1
   class Config::EnvironmentVariableRepresenter < ApiV1::BaseRepresenter
     alias_method :environment_variable, :represented
 
-    property :secure, exec_context: :decorator
+    property :isSecure, as: :secure
     property :name
     property :value, skip_nil: true, exec_context: :decorator
     property :encrypted_value, skip_nil: true, exec_context: :decorator
     property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
+    delegate :value=, :encrypted_value=, to: :environment_variable
+    
     def value
       environment_variable.getValueForDisplay() if environment_variable.isPlain
     end
 
-    def value=(value)
-      environment_variable.setValue(value)
-    end
-
     def encrypted_value
       environment_variable.getValueForDisplay() if environment_variable.isSecure
-    end
-
-    def encrypted_value=(value)
-      environment_variable.setEncryptedValue(value)
-    end
-
-    def secure
-      environment_variable.isSecure
-    end
-
-    def secure=(value)
-      environment_variable.setIsSecure(value)
     end
 
   end

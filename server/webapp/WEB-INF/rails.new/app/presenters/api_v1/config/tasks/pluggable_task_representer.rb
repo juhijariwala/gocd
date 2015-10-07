@@ -21,8 +21,8 @@ module ApiV1
         alias_method :pluggable_task, :represented
 
         property :plugin_configuration, decorator: PluginConfigurationRepresenter, class: PluginConfiguration
-        collection :configuration, exec_context: :decorator, decorator: PluginConfigurationPropertyRepresenter,:parse_strategy => lambda { |fragment, i, options|
-                                   task_config = PluggableTaskConfigStore.store().preferenceFor(pluggable_task.plugin_configuration.getId()).getConfig()
+        collection :configuration, exec_context: :decorator, decorator: PluginConfigurationPropertyRepresenter, :parse_strategy => lambda { |fragment, i, options|
+                                   task_config         = PluggableTaskConfigStore.store().preferenceFor(pluggable_task.plugin_configuration.getId()).getConfig()
                                    #TODO: review handleSecureValueConfiguration
 
                                    property_definition = task_config.get(fragment[:key])
@@ -39,22 +39,6 @@ module ApiV1
 
         def configuration
           pluggable_task.getConfiguration()
-        end
-
-        def configurationfoo=(hash)
-          task_config = PluggableTaskConfigStore.store().preferenceFor(pluggable_task.plugin_configuration.getId()).getConfig()
-          #TODO: review handleSecureValueConfiguration
-
-          hash.each do |property|
-            property_definition = task_config.get(property[:key])
-            #TODO: handle property_definition being nil
-            if (pluggable_task.getConfiguration().getProperty(property[:key]).nil?)
-              pluggable_task.getConfiguration().addNewConfiguration(property[:key], property_definition.getOption(com.thoughtworks.go.plugin.api.config.Property::SECURE))
-            end
-            config_property = pluggable_task.getConfiguration().getProperty(property[:key])
-            config_property.setConfigurationValue(ConfigurationValue.new(property[:value]))
-            config_property.handleSecureValueConfiguration(property_definition.getOption(com.thoughtworks.go.plugin.api.config.Property::SECURE))
-          end
         end
       end
     end

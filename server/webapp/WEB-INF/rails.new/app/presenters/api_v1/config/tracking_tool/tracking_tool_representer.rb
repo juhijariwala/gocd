@@ -18,19 +18,21 @@ module ApiV1
   module Config
     module TrackingTool
       class TrackingToolRepresenter < ApiV1::BaseRepresenter
+        TRACKING_TOOL_TYPE_TO_REPRESENTER_MAP={
+          'com.thoughtworks.go.config.MingleConfig' => MingleTrackingToolRepresenter,
+          'com.thoughtworks.go.config.TrackingTool' => ExternalTrackingToolRepresenter
+        }
+
+        TRACKING_TOOL_TYPE_TO_CLASS_MAP={
+          'external' => com.thoughtworks.go.config.TrackingTool,
+          'mingle'   => com.thoughtworks.go.config.MingleConfig
+        }
         alias_method :tracking_tool, :represented
         property :type, exec_context: :decorator, skip_parse: true
         nested :attributes,
                decorator: lambda { |tracking_tool, *|
-                  case tracking_tool.getClass.getName
-                    when 'com.thoughtworks.go.config.MingleConfig'
-                      MingleTrackingToolRepresenter
-                    when 'com.thoughtworks.go.config.TrackingTool'
-                      ExternalTrackingToolRepresenter
-                    else
-                      raise UnprocessableEntity, "Invalid Tracking Tool type. It can be one of '{mingle, external}'"
-                  end
-                }
+                 TRACKING_TOOL_TYPE_TO_REPRESENTER_MAP[tracking_tool.getClass.getName]
+               }
 
         property :errors, exec_context: :decorator, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
@@ -43,16 +45,16 @@ module ApiV1
           mapped_errors
         end
 
+        class << self
+          def get_class(type)
+              TRACKING_TOOL_TYPE_TO_CLASS_MAP[type] ||(raise UnprocessableEntity, "Invalid Tracking Tool type '#{type}'. It has to be one of '#{TRACKING_TOOL_TYPE_TO_CLASS_MAP.keys.join(', ')}.'")
+          end
+        end
+
         private
 
         def error_keys
-          tool_class = case tracking_tool.getClass.getName
-            when 'com.thoughtworks.go.config.MingleConfig'
-              MingleTrackingToolRepresenter
-            when 'com.thoughtworks.go.config.TrackingTool'
-              ExternalTrackingToolRepresenter
-          end
-
+          tool_class = TRACKING_TOOL_TYPE_TO_REPRESENTER_MAP[tracking_tool.getClass.getName]
           tool_class.new(tracking_tool).error_keys
         end
 

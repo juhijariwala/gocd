@@ -18,12 +18,9 @@ module ApiV1
   class Config::PropertyConfigRepresenter < ApiV1::BaseRepresenter
     alias_method :property, :represented
 
-    property :getName, as: :name
-    property :getSrc, as: :source
-    property :getXpath, as: :xpath
+    property :name
+    property :src, as: :source
+    property :xpath
 
-    def from_hash(hash, options={})
-      com.thoughtworks.go.config.ArtifactPropertiesGenerator.new(hash['name'], hash['src'], hash['xpath'])
-    end
   end
 end

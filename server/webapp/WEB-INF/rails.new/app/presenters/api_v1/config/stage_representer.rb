@@ -19,39 +19,34 @@ module ApiV1
     include JavaImports
     alias_method :stage, :represented
 
-    property :name, exec_context: :decorator
-    property :fetch_materials, exec_context: :decorator
-    property :clean_working_directory, exec_context: :decorator
-    property :never_cleanup_artifacts, exec_context: :decorator
-    property :approval, decorator: ApiV1::Config::ApprovalRepresenter, class: com.thoughtworks.go.config.Approval
-    collection :environment_variables, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::EnvironmentVariableRepresenter, class: com.thoughtworks.go.config.EnvironmentVariableConfig
-    collection :jobs, exec_context: :decorator, embedded: false, decorator: ApiV1::Config::JobRepresenter, class: com.thoughtworks.go.config.JobConfig
-    property :errors, exec_context: :decorator,decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
+    property :name, case_insensitive_string: true
+    property :fetch_materials
+    property :clean_working_dir, as: :clean_working_directory
+    property :artifact_cleanup_prohibited, as: :never_cleanup_artifacts
+    property :approval,
+             decorator: ApiV1::Config::ApprovalRepresenter,
+             class:     com.thoughtworks.go.config.Approval
+    collection :environment_variables,
+               exec_context: :decorator,
+               decorator:    ApiV1::Config::EnvironmentVariableRepresenter,
+               expect_hash:  true,
+               class:        com.thoughtworks.go.config.EnvironmentVariableConfig
+    collection :jobs,
+               exec_context: :decorator,
+               decorator:    ApiV1::Config::JobRepresenter,
+               expect_hash:  true,
+               class:        com.thoughtworks.go.config.JobConfig
+    property :errors, exec_context: :decorator, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
 
-    def fetch_materials
-      stage.isFetchMaterials()
-    end
+    delegate :name, :name=, to: :stage
 
-    def fetch_materials=(value)
-      stage.setFetchMaterials(value)
-    end
+    delegate :fetch_materials, :fetch_materials=, to: :stage
 
-    def clean_working_directory
-      stage.isCleanWorkingDir
-    end
+    delegate :clean_working_dir, :clean_working_dir=, to: :stage
 
-    def clean_working_directory=(value)
-      stage.setCleanWorkingDir(value)
-    end
+    delegate :artifact_cleanup_prohibited, :artifact_cleanup_prohibited=, to: :stage
 
-    def never_cleanup_artifacts
-      stage.isArtifactCleanupProhibited()
-    end
-
-    def never_cleanup_artifacts=(value)
-      stage.setArtifactCleanupProhibited(value)
-    end
 
     def jobs
       stage.getJobs()
@@ -59,14 +54,6 @@ module ApiV1
 
     def jobs=(value)
       stage.setJobs(JobConfigs.new(value.to_java(JobConfig)))
-    end
-
-    def name
-      stage.name().to_s
-    end
-
-    def name=(value)
-      stage.setName(value)
     end
 
     def environment_variables

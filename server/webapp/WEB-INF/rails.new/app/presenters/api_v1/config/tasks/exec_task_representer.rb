@@ -18,37 +18,29 @@ module ApiV1
   module Config
     module Tasks
       class ExecTaskRepresenter < ApiV1::Config::Tasks::BaseTaskRepresenter
-        alias_method :exec_task, :represented
+        alias_method :task, :represented
 
         property :command
         collection :arguments, skip_nil: true, exec_context: :decorator
         property :args, skip_nil: true, exec_context: :decorator
-        property :working_dir, exec_context: :decorator
-
-        def working_dir
-          exec_task.workingDirectory
-        end
-
-        def working_dir=(value)
-          exec_task.setWorkingDirectory(value)
-        end
+        property :working_directory
 
         def arguments
-          return nil if exec_task.getArgList().isEmpty()
-          exec_task.getArgList().map { |arg| arg.getValue() }
+          return nil if task.getArgList().isEmpty()
+          task.getArgList().map { |arg| arg.getValue() }
         end
 
         def arguments=(value)
-          exec_task.setArgsList(value)
+          task.setArgsList(value)
         end
 
         def args
-          return nil if com.thoughtworks.go.util.StringUtil.isBlank(exec_task.getArgs)
-          exec_task.getArgs
+          return nil if com.thoughtworks.go.util.StringUtil.isBlank(task.getArgs)
+          task.getArgs
         end
 
         def args=(value)
-          exec_task.setArgs(value)
+          task.setArgs(value)
         end
       end
     end

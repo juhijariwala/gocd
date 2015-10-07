@@ -21,26 +21,7 @@ module ApiV1
                 alias_method :material_config, :represented
 
                 property :scm_id, as: :ref
-                property :filter, exec_context: :decorator, decorator: FilterRepresenter, class: Filter
-                property :name, exec_context: :decorator, decorator: ApiV1::Config::CaseInsensitiveStringRepresenter, class: String
-                property :auto_update, exec_context: :decorator
-
-
-                def name
-                    material_config.getName
-                end
-
-                def name=(value)
-                    @represented.setName(value) unless (material_config.instance_of?(PackageMaterialConfig) || material_config.instance_of?(PluggableSCMMaterialConfig))
-                end
-
-                def auto_update
-                    material_config.autoUpdate
-                end
-
-                def auto_update=(value)
-                    @represented.setAutoUpdate(value) unless (material_config.instance_of?(PackageMaterialConfig) || material_config.instance_of?(PluggableSCMMaterialConfig))
-                end
+                property :filter, exec_context: :decorator, decorator: ApiV1::Config::Materials::FilterRepresenter, class:com.thoughtworks.go.util.Filter
 
                 def filter
                     material_config.filter

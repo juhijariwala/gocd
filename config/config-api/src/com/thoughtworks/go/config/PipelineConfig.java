@@ -638,6 +638,10 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
         this.params = paramsConfig;
     }
 
+    public void setParams(List<ParamConfig> paramsConfig) {
+        setParams(new ParamsConfig(paramsConfig));
+    }
+
     public ParamResolver applyOver(ParamResolver enclosingScope) {
         return enclosingScope.override(CLONER.deepClone(params));
     }
@@ -704,6 +708,10 @@ public class PipelineConfig extends BaseCollection<StageConfig> implements Param
 
     public void setName(String name) {
         this.name = new CaseInsensitiveString(name);
+    }
+
+    public void setName(CaseInsensitiveString name) {
+        this.name = name;
     }
 
     private void setConfigurationType(Map attributeMap) {

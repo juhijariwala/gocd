@@ -25,11 +25,11 @@ module ApiV1
       property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
       def value
-        return configuration_property.getValue() if !configuration_property.isSecure
+        configuration_property.getValue unless configuration_property.isSecure
       end
 
       def encrypted_value
-        return "****" if configuration_property.isSecure
+        configuration_property.getEncryptedValue.getValue if configuration_property.isSecure
       end
 
       def value=(val)

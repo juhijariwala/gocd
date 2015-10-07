@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="76">
-  <server artifactsdir="logs" commandRepositoryLocation="default" serverId="dev-id">
-    <security>
-      <passwordFile path="../manual-testing/ant_hg/password.properties" />
-      <roles>
-        <role name="xyz" />
-      </roles>
-      <admins>
-        <user>admin</user>
-      </admins>
-    </security>
-  </server>
+  <server artifactsdir="logs" commandRepositoryLocation="default" serverId="dev-id" />
   <pipelines group="first">
     <authorization>
       <view>
