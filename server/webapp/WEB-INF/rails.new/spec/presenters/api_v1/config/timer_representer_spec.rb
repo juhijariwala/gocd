@@ -54,7 +54,7 @@ describe ApiV1::Config::TimerRepresenter do
         spec: "SOME JUNK TIMER SPEC",
         only_on_changes: false,
         errors: {
-          spec: ["Invalid cron syntax"]
+          spec: ["Invalid cron syntax: Illegal characters for this position: 'SOM'"]
         }
     }
   end

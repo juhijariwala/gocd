@@ -79,7 +79,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
         name:                    "wunderbar",
         materials:               [
                                    {
-                                     type:        "SvnMaterial",
+                                     type:        "svn",
                                      attributes:  {
                                        url:             "http://some/svn/url",
                                        destination:     "svnDir",
@@ -168,7 +168,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
         pipeline_config = PipelineConfig.new
         ApiV1::Config::PipelineConfigRepresenter.new(pipeline_config).from_hash({materials: [
                                                                                               {
-                                                                                                type:       GitMaterialConfig::TYPE,
+                                                                                                type:       'git',
                                                                                                 attributes: {
                                                                                                   url:              "http://user:password@funk.com/blank",
                                                                                                   destination:      "destination",
@@ -182,7 +182,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
                                                                                                 }
                                                                                               },
                                                                                               {
-                                                                                                type:       SvnMaterialConfig::TYPE,
+                                                                                                type:       'svn',
                                                                                                 attributes: {
                                                                                                   url:                "url",
                                                                                                   destination:        "svnDir",
@@ -351,7 +351,7 @@ describe ApiV1::Config::PipelineConfigRepresenter do
       materials:               [],
       stages:                  nil,
       tracking_tool:           nil,
-      timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax"]}},
+      timer:                   {spec: "", only_on_changes: true, errors: {spec: ["Invalid cron syntax: Unexpected end of expression."]}},
       errors:                  {
         materials:     ["A pipeline must have at least one material"],
         labelTemplate: ["Invalid label. Label should be composed of alphanumeric text, it should contain the builder number as ${COUNT}, can contain a material revision as ${<material-name>} of ${<material-name>[:<number>]}, or use params as \#{<param-name>}."],
@@ -380,10 +380,10 @@ describe ApiV1::Config::PipelineConfigRepresenter do
       environment_variables:   [],
       materials:               [
                                  {
-                                   type: "SvnMaterial", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
+                                   type: "svn", attributes: {url: "http://some/svn/url", destination: "svnDir", filter: nil, name: "http___some_svn_url", auto_update: true, check_externals: false, username: nil}
                                  },
                                  {
-                                   type:   "GitMaterial", attributes: {url: nil, destination: nil, filter: nil, name: nil, auto_update: true, branch: "master", submodule_folder: nil},
+                                   type:   "git", attributes: {url: nil, destination: nil, filter: nil, name: nil, auto_update: true, branch: "master", submodule_folder: nil},
                                    errors: {folder: ["Destination directory is required when specifying multiple scm materials"], url: ["URL cannot be blank"]}
                                  }
                                ],

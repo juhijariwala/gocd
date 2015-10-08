@@ -67,14 +67,11 @@ module ApiV1
     end
 
     def run_instance_count=(val)
-      if val.is_a?(Integer)
-        job.setRunInstanceCount(val.to_s)
-      end
-
       return if val.blank? || val.to_s.strip.downcase == 'null'
-
       if val.to_s.strip.downcase == 'all'
         job.setRunOnAllAgents(true)
+      else
+        job.setRunInstanceCount(val.to_s)
       end
     end
 

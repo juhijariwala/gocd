@@ -110,6 +110,11 @@ describe ApiV1::Config::JobRepresenter do
       ApiV1::Config::JobRepresenter.new(job_config).from_hash(run_instance_count: '10')
       expect(job_config.run_on_all_agents).to eq(false)
       expect(job_config.run_instance_count).to eq('10')
+
+      job_config = JobConfig.new
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash(run_instance_count: 10)
+      expect(job_config.run_on_all_agents).to eq(false)
+      expect(job_config.run_instance_count).to eq('10')
     end
 
     it 'should convert basic hash with environment variable to Job' do

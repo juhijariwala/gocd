@@ -27,7 +27,6 @@ module ApiV1
     include JavaImports
 
     SkipParseOnBlank = lambda { |fragment, *args|
-      puts "skip parse on #{self} for fragment #{fragment}"
       fragment.blank?
     }
 
