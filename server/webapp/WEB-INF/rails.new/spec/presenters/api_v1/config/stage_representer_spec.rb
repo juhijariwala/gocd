@@ -142,7 +142,7 @@ describe ApiV1::Config::StageRepresenter do
   it "should render errors" do
     stage_config = StageConfigMother.stageConfigWithEnvironmentVariable("stage#1")
     stage_config.getJobs().get(0).setTasks(com.thoughtworks.go.config.Tasks.new(FetchTask.new(CaseInsensitiveString.new(""),CaseInsensitiveString.new(""), CaseInsensitiveString.new(""),nil, nil )))
-    stage_config.validateTree(com.thoughtworks.go.config.PipelineConfigSaveValidationContext::forChain([]))
+    stage_config.addError('name','Invalid stage name')
     presenter = ApiV1::Config::StageRepresenter.new(stage_config)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
 
@@ -177,7 +177,7 @@ describe ApiV1::Config::StageRepresenter do
                                ],
       jobs:                    stage_config.getJobs().collect { |j| ApiV1::Config::JobRepresenter.new(j).to_hash(url_builder: UrlBuilder.new) },
       errors:                  {
-        name: ["Invalid stage name 'stage#1'. This must be alphanumeric and can contain underscores and periods (however, it cannot start with a period). The maximum allowed length is 255 characters."]
+        name: ["Invalid stage name"]
       }
     }
   end

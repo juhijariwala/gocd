@@ -21,24 +21,17 @@ module ApiV1
         alias_method :pluggable_task, :represented
 
         property :plugin_configuration, decorator: PluginConfigurationRepresenter, class: PluginConfiguration
-        collection :configuration, exec_context: :decorator, decorator: PluginConfigurationPropertyRepresenter, :parse_strategy => lambda { |fragment, i, options|
-                                   task_config         = PluggableTaskConfigStore.store().preferenceFor(pluggable_task.plugin_configuration.getId()).getConfig()
-                                   #TODO: review handleSecureValueConfiguration
-
-                                   property_definition = task_config.get(fragment[:key])
-                                   #TODO: handle property_definition being nil
-                                   if (configuration.getProperty(fragment[:key]).nil?)
-                                     configuration.addNewConfiguration(fragment[:key], property_definition.getOption(com.thoughtworks.go.plugin.api.config.Property::SECURE))
-                                   end
-                                   config_property = configuration.getProperty(fragment[:key])
-                                   config_property.setConfigurationValue(ConfigurationValue.new(fragment[:value]))
-                                   config_property.handleSecureValueConfiguration(property_definition.getOption(com.thoughtworks.go.plugin.api.config.Property::SECURE))
-                                   config_property
-                                 }
-
+        collection :configuration, exec_context: :decorator, decorator: PluginConfigurationPropertyRepresenter, class: com.thoughtworks.go.domain.config.ConfigurationProperty
+        #TODO: handle property_definition being nil
 
         def configuration
           pluggable_task.getConfiguration()
+        end
+
+        def configuration=(value)
+          value.each { |config|
+            pluggable_task.setConfiguration(config)
+          }
         end
       end
     end

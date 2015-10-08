@@ -281,6 +281,43 @@ public class PluggableTaskTest {
         assertThat(task.configAsMap().get("Key2").get(PluggableTask.VALUE_KEY), is("value2"));
     }
 
+    @Test
+    public void shouldAddPropertyGivenConfigurationPropertyIfPresentInConfigStoreEvenIfItISNotPresentInCurrentConfiguration() throws Exception {
+        TaskPreference taskPreference = mock(TaskPreference.class);
+        Configuration configuration = new Configuration(ConfigurationPropertyMother.create("KEY1"));
+        PluggableTaskConfigStore.store().setPreferenceFor("abc.def", taskPreference);
+
+        PluggableTask task = new PluggableTask("abc", new PluginConfiguration("abc.def", "1"), configuration);
+        ConfigurationProperty configurationProperty = ConfigurationPropertyMother.create("KEY1", false, "value1");
+
+        TaskConfig taskConfig = new TaskConfig();
+        TaskProperty property1 = new TaskProperty("KEY1", "value1");
+        taskConfig.addProperty(property1.getName());
+        when(taskPreference.getConfig()).thenReturn(taskConfig);
+        task.setConfiguration(configurationProperty);
+        assertThat(task.configAsMap().get("KEY1").get(PluggableTask.VALUE_KEY), is("value1"));
+    }
+
+    @Test
+    public void shouldAddSecurePropertyGivenConfigurationPropertyIfPresentInConfigStoreEvenIfItISNotPresentInCurrentConfiguration() throws Exception {
+        TaskPreference taskPreference = mock(TaskPreference.class);
+
+        Configuration configuration = new Configuration(ConfigurationPropertyMother.create("secureKey"));
+        PluggableTaskConfigStore.store().setPreferenceFor("abc.def", taskPreference);
+
+        PluggableTask task = new PluggableTask("abc", new PluginConfiguration("abc.def", "1"), configuration);
+        ConfigurationProperty configurationProperty = new ConfigurationProperty(new ConfigurationKey("secureKey"), new ConfigurationValue("secureValue"), new EncryptedConfigurationValue("old-encrypted-text"),
+                new GoCipher());
+
+        TaskConfig taskConfig = new TaskConfig();
+        TaskProperty property = new TaskProperty("secureKey", "secureValue");
+        taskConfig.addProperty(property.getName()).with(Property.SECURE, true);
+        when(taskPreference.getConfig()).thenReturn(taskConfig);
+        task.setConfiguration(configurationProperty);
+        assertThat(task.getConfiguration().getProperty("secureKey").getConfigurationValue(), is(nullValue()));
+        assertThat(task.getConfiguration().getProperty("secureKey").getEncryptedValue().getValue(), is(new GoCipher().encrypt("secureValue")));
+    }
+
     private void assertProperty(TaskProperty taskProperty, String name, String value, String cssClass) {
         assertThat(taskProperty.getName(), is(name));
         assertThat(taskProperty.getValue(), is(value));

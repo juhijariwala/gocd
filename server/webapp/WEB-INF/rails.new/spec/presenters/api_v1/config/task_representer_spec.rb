@@ -55,7 +55,6 @@ describe ApiV1::Config::Tasks::TaskRepresenter do
 
         presenter = ApiV1::Config::Tasks::TaskRepresenter.new(new_task)
         presenter.from_hash(ApiV1::Config::Tasks::TaskRepresenter.new(existing_task).to_hash(url_builder: UrlBuilder.new))
-
         expect(new_task).to eq(existing_task)
       end
 
@@ -235,17 +234,17 @@ describe ApiV1::Config::Tasks::TaskRepresenter do
 
     before(:each) do
       task            = TaskMother::StubTask.new
-      simple_property = TaskConfigProperty.new('simple_key', 'simple-value')
-      secure_property = TaskConfigProperty.new('secure_key', 'secure-value').with(com.thoughtworks.go.plugin.api.config.Property::SECURE, true)
+      simple_property = TaskConfigProperty.new('simple_key', 'value')
+      secure_property = TaskConfigProperty.new('secure_key', 'encrypted').with(com.thoughtworks.go.plugin.api.config.Property::SECURE, true)
 
       task.config.add(simple_property)
       task.config.add(secure_property)
       task_preference = TaskPreference.new(task)
-      store           = double('PluggableTaskConfigStore')
-      store.stub(:preferenceFor).with(anything).and_return(task_preference)
-      PluggableTaskConfigStore.stub(:store).and_return(store)
-      # PluggableTaskConfigStore.store().preferenceFor(pluggable_task.plugin_configuration.getId())
+
+      PluggableTaskConfigStore.store().setPreferenceFor("curl", task_preference);
     end
+
+
 
     def existing_task
       @task ||= begin

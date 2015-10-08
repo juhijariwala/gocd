@@ -21,7 +21,7 @@ module ApiV1
                 alias_method :material_config, :represented
 
                 property :scm_id, as: :ref
-                property :filter, exec_context: :decorator, decorator: ApiV1::Config::Materials::FilterRepresenter, class:com.thoughtworks.go.util.Filter
+                property :filter, exec_context: :decorator, decorator: ApiV1::Config::Materials::FilterRepresenter, class:com.thoughtworks.go.config.materials.Filter
 
                 def filter
                     material_config.filter

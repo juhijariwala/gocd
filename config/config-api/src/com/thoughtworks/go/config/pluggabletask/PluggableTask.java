@@ -93,6 +93,20 @@ public class PluggableTask extends AbstractTask {
         }
     }
 
+    public void setConfiguration(ConfigurationProperty configurationProperty) {
+        TaskConfig taskConfig = PluggableTaskConfigStore.store().preferenceFor(pluginConfiguration.getId()).getConfig();
+        String configKeyName = configurationProperty.getConfigKeyName();
+        Property property_definition = taskConfig.get(configKeyName);
+        if (configuration.getProperty(configKeyName) == null) {
+            configuration.addNewConfiguration(configKeyName, property_definition.getOption(Property.SECURE));
+        }
+        ConfigurationProperty addedConfigProperty = configuration.getProperty(configKeyName);
+
+        addedConfigProperty.setConfigurationValue(configurationProperty.getConfigurationValue());
+        addedConfigProperty.setEncryptedConfigurationValue(configurationProperty.getEncryptedValue());
+        addedConfigProperty.handleSecureValueConfiguration(property_definition.getOption(Property.SECURE));
+    }
+
     @Override
     protected void validateTask(ValidationContext validationContext) {
     }

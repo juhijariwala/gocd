@@ -277,7 +277,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
   end
 
-  describe "pluggable scm material" do
+  describe :pluggable do
     it "should represent a pluggable scm material" do
       pluggable_scm_material = MaterialConfigsMother.pluggableSCMMaterialConfig()
       presenter              = ApiV1::Config::Materials::MaterialRepresenter.prepare(pluggable_scm_material)

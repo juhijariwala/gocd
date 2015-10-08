@@ -164,7 +164,6 @@ describe ApiV1::Config::JobRepresenter do
     job_config.setArtifactPlans(plans)
     job_config.setTasks(com.thoughtworks.go.config.Tasks.new(FetchTask.new(CaseInsensitiveString.new(''), CaseInsensitiveString.new(''), CaseInsensitiveString.new(''), nil, nil)))
     job_config.setTabs(com.thoughtworks.go.config.Tabs.new(com.thoughtworks.go.config.Tab.new('coverage#1', '/Jcoverage/index.html'), com.thoughtworks.go.config.Tab.new('coverage#1', '/Jcoverage/path.html')))
-
     job_config.validateTree(PipelineConfigSaveValidationContext.forChain(PipelineConfig.new, StageConfig.new, job_config))
     presenter   = ApiV1::Config::JobRepresenter.new(job_config)
     actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
