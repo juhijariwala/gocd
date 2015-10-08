@@ -26,11 +26,17 @@ module ApiV1
     include Roar::JSON::HAL
     include JavaImports
 
+    SkipParseOnBlank = lambda { |fragment, *args|
+      puts "skip parse on #{self} for fragment #{fragment}"
+      fragment.blank?
+    }
+
     class_attribute :collection_items
+    self.collection_items = []
 
     class <<self
       def property(name, options={})
-        if options[:case_insensitive_string]
+        if options.delete(:case_insensitive_string)
           options.merge!({
                            getter: lambda { |options|
                              self.send(name).to_s if self.send(name)
@@ -42,7 +48,6 @@ module ApiV1
         end
 
         if options[:collection]
-          self.collection_items ||= []
           self.collection_items << name
         end
 
@@ -56,7 +61,7 @@ module ApiV1
           }
         end
 
-        unless (options[:skip_nil])
+        unless options.delete(:skip_nil)
           options.merge!(render_nil: true)
         end
 
@@ -74,14 +79,15 @@ module ApiV1
 
     private
     def with_default_values(hash)
-      hash = (hash || {}).deep_symbolize_keys
-      if self.collection_items.blank?
-        hash
-      else
-        self.collection_items.inject(hash) do |memo, item|
-          memo[item] ||= []
-          memo
-        end
+      hash ||= {}
+
+      if hash.respond_to?(:has_key?)
+        hash = hash.deep_symbolize_keys
+      end
+
+      self.collection_items.inject(hash) do |memo, item|
+        memo[item] ||= []
+        memo
       end
     end
   end

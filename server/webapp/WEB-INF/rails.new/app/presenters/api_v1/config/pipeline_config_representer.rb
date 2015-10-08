@@ -20,7 +20,7 @@ module ApiV1
       alias_method :pipeline, :represented
 
       link :self do |opts|
-        opts[:url_builder].apiv1_admin_pipeline_url(pipeline.name)
+        opts[:url_builder].apiv1_admin_pipeline_url(name: pipeline.name)
       end
 
       link :doc do |opts|
@@ -28,7 +28,7 @@ module ApiV1
       end
 
       link :find do |opts|
-        opts[:url_builder].apiv1_admin_pipeline_url(':name')
+        opts[:url_builder].apiv1_admin_pipeline_url(name: ':name')
       end
 
       property :label_template
@@ -71,8 +71,10 @@ module ApiV1
                }
 
       property :timer,
-               decorator: ApiV1::Config::TimerRepresenter,
-               class:     com.thoughtworks.go.config.TimerConfig
+               decorator:  ApiV1::Config::TimerRepresenter,
+               class:      com.thoughtworks.go.config.TimerConfig,
+               skip_parse: SkipParseOnBlank
+
       property :errors,
                exec_context: :decorator,
                decorator:    ApiV1::Config::ErrorRepresenter,

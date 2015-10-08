@@ -413,7 +413,7 @@ define(['lodash', "pipeline_configs/models/materials"], function (_, Materials) 
           expect(perforceMaterial.name()).toBe("materialA");
           expect(perforceMaterial.autoUpdate()).toBe(true);
           expect(perforceMaterial.view()).toBe("//depot/dev/source...          //anything/source/");
-          expect(perforceMaterial.filter().ignore()).toEqual(['*.doc'])
+          expect(perforceMaterial.filter().ignore()).toEqual(['*.doc']);
         });
 
         function sampleJSON() {

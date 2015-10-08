@@ -145,9 +145,7 @@ define(['lodash', "pipeline_configs/models/pipeline", "string-plus"], function (
             attributes: {
               name:        "materialA",
               auto_update: false,
-              "filter":    {
-                "ignore": []
-              },
+              filter:      null,
               destination: "dest_folder",
               url:         "http://your-svn/",
               username:    "",

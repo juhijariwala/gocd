@@ -18,7 +18,9 @@ module ApiV1
   class Config::TimerRepresenter < ApiV1::BaseRepresenter
     alias_method :timer, :represented
 
-    property :timer_spec, as: :spec
+    property :timer_spec, as: :spec, setter: lambda { |value, args|
+                          self.timer_spec = value unless value.blank?
+                        }
     property :onlyOnChanges , as: :only_on_changes
     property :errors,
              exec_context: :decorator,

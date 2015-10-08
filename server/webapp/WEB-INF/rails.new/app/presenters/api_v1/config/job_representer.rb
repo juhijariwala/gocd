@@ -20,10 +20,10 @@ module ApiV1
 
     property :name,
              case_insensitive_string: true
-    property :run_on_all_agents
+
     property :run_instance_count,
-             getter: lambda { |options| run_instance_count.to_i },
-             setter: lambda { |val, options| self.run_instance_count = val.to_s }
+             exec_context: :decorator
+
     property :timeout,
              getter: lambda { |options| timeout.to_i },
              setter: lambda { |val, options| self.timeout = val.to_s }
@@ -56,7 +56,27 @@ module ApiV1
     collection :properties, exec_context: :decorator, decorator: ApiV1::Config::PropertyConfigRepresenter, class: com.thoughtworks.go.config.ArtifactPropertiesGenerator, render_empty: false
     property :errors, decorator: ApiV1::Config::ErrorRepresenter, skip_parse: true, skip_render: lambda { |object, options| object.empty? }
 
-    delegate :run_on_all_agents, :run_on_all_agents=, to: :job
+    def run_instance_count
+      if job.getRunInstanceCount.present?
+        job.getRunInstanceCount.to_i
+      elsif job.isRunOnAllAgents
+        'all'
+      else
+        nil
+      end
+    end
+
+    def run_instance_count=(val)
+      if val.is_a?(Integer)
+        job.setRunInstanceCount(val.to_s)
+      end
+
+      return if val.blank? || val.to_s.strip.downcase == 'null'
+
+      if val.to_s.strip.downcase == 'all'
+        job.setRunOnAllAgents(true)
+      end
+    end
 
     def artifacts
       job.artifactPlans

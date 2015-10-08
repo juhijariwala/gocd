@@ -18,19 +18,18 @@ module ApiV1
   module Config
     module Materials
       class MaterialRepresenter < ApiV1::BaseRepresenter
-        MATERIAL_TYPE_MAP = [
-          GitMaterialConfig,
-          SvnMaterialConfig,
-          HgMaterialConfig,
-          P4MaterialConfig,
-          TfsMaterialConfig,
-          DependencyMaterialConfig,
-          PackageMaterialConfig,
-          PluggableSCMMaterialConfig
-        ].inject({}) do |memo, material_type|
-          memo[material_type.const_get(:TYPE)] = material_type
-          memo
-        end
+        TYPE_TO_MATERIAL_MAP = {
+          'git'        => GitMaterialConfig,
+          'svn'        => SvnMaterialConfig,
+          'hg'         => HgMaterialConfig,
+          'p4'         => P4MaterialConfig,
+          'tfs'        => TfsMaterialConfig,
+          'dependency' => DependencyMaterialConfig,
+          'package'    => PackageMaterialConfig,
+          'plugin'     => PluggableSCMMaterialConfig
+        }
+
+        MATERIAL_TO_TYPE_MAP = TYPE_TO_MATERIAL_MAP.invert
 
         MATERIAL_TYPE_TO_REPRESENTER_MAP = {
           GitMaterialConfig          => GitMaterialRepresenter,
@@ -44,7 +43,8 @@ module ApiV1
         }
         alias_method :material_config, :represented
 
-        property :getType, as: :type, skip_parse: true
+        property :type, getter: lambda { |options| MATERIAL_TO_TYPE_MAP[self.class] }, skip_parse: true
+
         nested :attributes,
                decorator: lambda { |material_config, *|
                  MATERIAL_TYPE_TO_REPRESENTER_MAP[material_config.class]
@@ -53,7 +53,7 @@ module ApiV1
 
         class << self
           def get_material_type(type)
-            MATERIAL_TYPE_MAP[type] or (raise UnprocessableEntity, "Invalid material type '#{type}'. It has to be one of '#{MATERIAL_TYPE_MAP.keys.join(' ')}'")
+            TYPE_TO_MATERIAL_MAP[type] or (raise UnprocessableEntity, "Invalid material type '#{type}'. It has to be one of '#{TYPE_TO_MATERIAL_MAP.keys.join(' ')}'")
           end
         end
 

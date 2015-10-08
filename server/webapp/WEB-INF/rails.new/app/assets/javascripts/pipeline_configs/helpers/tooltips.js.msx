@@ -442,6 +442,14 @@ define(['mithril', 'lodash', './form_helper'], function (m, _, f) {
     </div>
   );
 
+  var jobRunOnAgents = (
+    <div>
+      <p>
+        Specify the number of agents that this job will run on.
+      </p>
+    </div>
+  );
+
   var jobRunOnAllAgents = (
     <div>
       <p>
@@ -502,7 +510,8 @@ define(['mithril', 'lodash', './form_helper'], function (m, _, f) {
     job: {
       resources:   jobResources,
       timeout:     jobTimeout,
-      runOnAgents: {
+      runInstanceCount: {
+        main: jobRunOnAgents,
         one:  jobRunOnOneAgent,
         all:  jobRunOnAllAgents,
         many: jobRunOnManyAgents

@@ -10,11 +10,12 @@ module ApiV1
                  setter:       lambda { |value, options|
                    self.setUrl(value)
                  }
-        property :folder, as: :destination
+        property :folder, as: :destination, skip_parse: SkipParseOnBlank
         property :filter,
-                 decorator: ApiV1::Config::Materials::FilterRepresenter,
-                 class:     com.thoughtworks.go.config.materials.Filter
-        property :name,case_insensitive_string: true
+                 decorator:  ApiV1::Config::Materials::FilterRepresenter,
+                 class:      com.thoughtworks.go.config.materials.Filter,
+                 skip_parse: SkipParseOnBlank
+        property :name, case_insensitive_string: true, skip_parse: SkipParseOnBlank
         property :auto_update
 
       end

@@ -27,30 +27,55 @@ describe ApiV1::Config::JobRepresenter do
       expect(job_config).to eq(expected)
     end
 
+    it 'should serialize run_instance_count with value set to 10' do
+      job_config = JobConfig.new
+      job_config.setRunInstanceCount(10)
+
+      presenter   = ApiV1::Config::JobRepresenter.new(job_config)
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+      expect(actual_json[:run_instance_count]).to be(10)
+    end
+
+    it 'should serialize run_instance_count with value `all` when runOnAllAgents is true' do
+      job_config = JobConfig.new
+      job_config.setRunOnAllAgents(true)
+
+      presenter   = ApiV1::Config::JobRepresenter.new(job_config)
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+      expect(actual_json[:run_instance_count]).to eq('all')
+    end
+
+    it 'should serialize run_instance_count with value `nil` when runOnAllAgents is false and eunInstanceCount is unset' do
+      job_config = JobConfig.new
+
+      presenter   = ApiV1::Config::JobRepresenter.new(job_config)
+      actual_json = presenter.to_hash(url_builder: UrlBuilder.new)
+      expect(actual_json[:run_instance_count]).to be(nil)
+    end
+
     def job_hash
       {
         name:                  'defaultJob',
-        run_on_all_agents:     false,
         run_instance_count:    3,
         timeout:               100,
         environment_variables: [
-                                 {secure: true, name: 'MULTIPLE_LINES', encrypted_value: com.thoughtworks.go.helper.JobConfigMother.jobConfig().variables.get(0).getEncryptedValue},
-                                 {secure: false, name: 'COMPLEX', value: 'This has very <complex> data'}
+                                 { secure: true, name: 'MULTIPLE_LINES', encrypted_value: com.thoughtworks.go.helper.JobConfigMother.jobConfig().variables.get(0).getEncryptedValue },
+                                 { secure: false, name: 'COMPLEX', value: 'This has very <complex> data' }
                                ],
-        resources: %w(Linux Java),
+        resources:             %w(Linux Java),
         tasks:                 [
-                                 {type: 'ant', attributes: {working_directory: 'working-directory', build_file: 'build-file', target: 'target'}}
+                                 { type: 'ant', attributes: { working_directory: 'working-directory', build_file: 'build-file', target: 'target' } }
                                ],
         tabs:                  [
-                                 {name: 'coverage', path: 'Jcoverage/index.html'},
-                                 {name: 'something', path: 'something/path.html'}
+                                 { name: 'coverage', path: 'Jcoverage/index.html' },
+                                 { name: 'something', path: 'something/path.html' }
                                ],
         artifacts:             [
-                                 {source: 'target/dist.jar', destination: 'pkg', type: 'build'},
-                                 {source: nil, destination: 'testoutput', type: 'test'}
+                                 { source: 'target/dist.jar', destination: 'pkg', type: 'build' },
+                                 { source: nil, destination: 'testoutput', type: 'test' }
                                ],
 
-        properties:            [{name: 'coverage.class', source: 'target/emma/coverage.xml', xpath: "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')"}]
+        properties:            [{ name: 'coverage.class', source: 'target/emma/coverage.xml', xpath: "substring-before(//report/data/all/coverage[starts-with(@type,'class')]/@value, '%')" }]
       }
     end
   end
@@ -60,14 +85,31 @@ describe ApiV1::Config::JobRepresenter do
       job_config = JobConfig.new
       ApiV1::Config::JobRepresenter.new(job_config).from_hash({
                                                                 name:               'some-job',
-                                                                run_on_all_agents:  true,
-                                                                run_instance_count: '3',
                                                                 timeout:            '100',
                                                               })
       expect(job_config.name.to_s).to eq('some-job')
-      expect(job_config.is_run_on_all_agents).to eq(true)
-      expect(job_config.run_instance_count).to eq("3")
-      expect(job_config.timeout).to eq("100")
+      expect(job_config.timeout).to eq('100')
+    end
+
+    it 'should convert attribute run_instance_count with value `all` to Job' do
+      job_config = JobConfig.new
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash(run_instance_count: 'all')
+      expect(job_config.run_on_all_agents).to eq(true)
+      expect(job_config.run_instance_count).to eq(nil)
+    end
+
+    it 'should convert attribute run_instance_count with value `nil` to Job' do
+      job_config = JobConfig.new
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash(run_instance_count: nil)
+      expect(job_config.run_on_all_agents).to eq(false)
+      expect(job_config.run_instance_count).to eq(nil)
+    end
+
+    it 'should convert attribute run_instance_count with integer value `nil` to Job' do
+      job_config = JobConfig.new
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash(run_instance_count: '10')
+      expect(job_config.run_on_all_agents).to eq(false)
+      expect(job_config.run_instance_count).to eq('10')
     end
 
     it 'should convert basic hash with environment variable to Job' do
@@ -85,20 +127,20 @@ describe ApiV1::Config::JobRepresenter do
         }
       ]
 
-      ApiV1::Config::JobRepresenter.new(job_config).from_hash({environment_variables: environment_variables})
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({ environment_variables: environment_variables })
       expect(job_config.variables.map(&:name)).to eq(%w(USERNAME API_KEY))
     end
 
     it 'should convert basic hash with resources to Job' do
       job_config = JobConfig.new
 
-      ApiV1::Config::JobRepresenter.new(job_config).from_hash({resources: %w(java linux)})
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({ resources: %w(java linux) })
       expect(job_config.resources.map(&:name)).to eq(%w(java linux))
     end
     it 'should convert basic hash with task to Job' do
       job_config = JobConfig.new
-      task_hash  = {type: 'ant', attributes: {working_directory: 'working-directory', build_file: 'build-file', target: 'target'}}
-      ApiV1::Config::JobRepresenter.new(job_config).from_hash({tasks: [task_hash]})
+      task_hash  = { type: 'ant', attributes: { working_directory: 'working-directory', build_file: 'build-file', target: 'target' } }
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({ tasks: [task_hash] })
       expect(job_config.tasks.size).to eq(1)
       expect(job_config.tasks.first.getTaskType).to eq('ant')
       expect(job_config.tasks.first.getBuildFile).to eq('build-file')
@@ -107,7 +149,7 @@ describe ApiV1::Config::JobRepresenter do
     it 'should  raise exception when invalid task type is passed' do
       expect do
         job_config = JobConfig.new
-        ApiV1::Config::JobRepresenter.new(job_config).from_hash({tasks: [{type: 'invalid'}]})
+        ApiV1::Config::JobRepresenter.new(job_config).from_hash({ tasks: [{ type: 'invalid' }] })
       end.to raise_error(ApiV1::UnprocessableEntity, /Invalid task type 'invalid'. It has to be one of /)
     end
 
@@ -115,21 +157,21 @@ describe ApiV1::Config::JobRepresenter do
       job_config = JobConfig.new
       tab_hash   = [
         {
-          name: 'coverage', path: 'Jcoverage/index.html'},
-        {name: 'something', path: 'something/path.html'}
+          name: 'coverage', path: 'Jcoverage/index.html' },
+        { name: 'something', path: 'something/path.html' }
       ]
-      ApiV1::Config::JobRepresenter.new(job_config).from_hash({tabs: tab_hash})
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({ tabs: tab_hash })
       expect(job_config.getTabs.map(&:name)).to eq(%w(coverage something))
     end
 
     it 'should convert basic hash with artifact to Job' do
       job_config = JobConfig.new
       artifacts  = [
-        {source: 'target/dist.jar', destination: 'pkg', type: 'build'},
-        {source: nil, destination: 'testoutput', type: 'test'}
+        { source: 'target/dist.jar', destination: 'pkg', type: 'build' },
+        { source: nil, destination: 'testoutput', type: 'test' }
       ]
 
-      ApiV1::Config::JobRepresenter.new(job_config).from_hash({artifacts: artifacts})
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({ artifacts: artifacts })
       expect(job_config.artifactPlans.map(&:dest)).to eq(%w(pkg testoutput))
       expect(job_config.artifactPlans.map(&:getArtifactType).map(&:to_s)).to eq(%w(file unit))
     end
@@ -137,7 +179,7 @@ describe ApiV1::Config::JobRepresenter do
     it 'should raise exception when invalid artifact type is passed' do
       expect do
         job_config = JobConfig.new
-        ApiV1::Config::JobRepresenter.new(job_config).from_hash({artifacts: [{type: 'invalid'}]})
+        ApiV1::Config::JobRepresenter.new(job_config).from_hash({ artifacts: [{ type: 'invalid' }] })
       end.to raise_error(ApiV1::UnprocessableEntity, /Invalid Artifact type: 'invalid'. It has to be one of/)
     end
 
@@ -151,7 +193,7 @@ describe ApiV1::Config::JobRepresenter do
         }
       ]
 
-      ApiV1::Config::JobRepresenter.new(job_config).from_hash({properties: properties})
+      ApiV1::Config::JobRepresenter.new(job_config).from_hash({ properties: properties })
       expect(job_config.getProperties.map(&:name)).to eq(['coverage.class'])
     end
 
@@ -174,15 +216,14 @@ describe ApiV1::Config::JobRepresenter do
   def job_hash_with_errors
     {
       name:                  nil,
-      run_on_all_agents:     false,
-      run_instance_count:    0,
+      run_instance_count:    nil,
       timeout:               0,
       environment_variables: [],
       resources:             [],
       tasks:                 [
                                {
                                  type:       'fetch',
-                                 attributes: {pipeline: '', stage: '', job: '', is_source_a_file: false, source: nil, destination: ''},
+                                 attributes: { pipeline: '', stage: '', job: '', is_source_a_file: false, source: nil, destination: '' },
                                  errors:     {
                                    job:   ['Job is a required field.'],
                                    src:   ['Should provide either srcdir or srcfile'],

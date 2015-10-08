@@ -60,7 +60,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
     it "should deserialize material without name" do
       presenter           = ApiV1::Config::Materials::MaterialRepresenter.new(GitMaterialConfig.new)
       deserialized_object = presenter.from_hash({
-                                                  type:       GitMaterialConfig::TYPE,
+                                                  type:       'git',
                                                   attributes: {
                                                     url:         "http://user:password@funk.com/blank",
                                                     branch:      "master",
@@ -76,7 +76,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def material_hash
       {
-        type:       GitMaterialConfig::TYPE,
+        type:       'git',
         attributes: {
           url:              "http://user:password@funk.com/blank",
           destination:      "destination",
@@ -93,7 +93,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def git_material_basic_hash
       {
-        type:       GitMaterialConfig::TYPE,
+        type:       'git',
         attributes: {
           url:              "http://user:password@funk.com/blank",
           destination:      nil,
@@ -120,7 +120,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def material_hash
       {
-        type:       SvnMaterialConfig::TYPE,
+        type:       'svn',
         attributes: {
           url:                "url",
           destination:        "svnDir",
@@ -152,7 +152,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def material_hash
       {
-        type:       HgMaterialConfig::TYPE,
+        type:       'hg',
         attributes: {
           url:         "http://user:pass@domain/path##branch",
           destination: "dest-folder",
@@ -179,7 +179,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def material_hash
       {
-        type:       TfsMaterialConfig::TYPE,
+        type:       'tfs',
         attributes: {
           url:                "http://10.4.4.101:8080/tfs/Sample",
           destination:        "dest-folder",
@@ -210,7 +210,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def material_hash
       {
-        type:       P4MaterialConfig::TYPE,
+        type:       'p4',
         attributes: {
           destination:        "dest-folder",
           filter:             {
@@ -241,7 +241,7 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def material_hash
       {
-        type:       DependencyMaterialConfig::TYPE,
+        type:       'dependency',
         attributes: {
           pipeline:    "pipeline-name",
           stage:       "stage-name",
@@ -268,9 +268,9 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def package_material_hash
       {
-        type:       PackageMaterialConfig::TYPE,
+        type:       'package',
         attributes: {
-          ref:         "p-id"
+          ref: "p-id"
         }
       }
     end
@@ -294,10 +294,10 @@ describe ApiV1::Config::Materials::MaterialRepresenter do
 
     def pluggable_scm_material_hash
       {
-        type:       PluggableSCMMaterialConfig::TYPE,
+        type:       'plugin',
         attributes: {
-          ref:         "scm-id",
-          filter:      {
+          ref:    "scm-id",
+          filter: {
             ignore: %w(**/*.html **/foobar/)
           }
         }
