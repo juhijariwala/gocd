@@ -113,8 +113,8 @@ public class ArtifactPlansTest {
     public void shouldValidateTree(){
         ArtifactPlans artifactPlans = new ArtifactPlans();
         artifactPlans.add(new ArtifactPlan("src", "dest"));
-        artifactPlans.add(new ArtifactPlan("src", "../a"));
         artifactPlans.add(new ArtifactPlan("src", "dest"));
+        artifactPlans.add(new ArtifactPlan("src", "../a"));
 
         artifactPlans.validateTree(null);
         assertThat(artifactPlans.get(0).errors().on(ArtifactPlan.DEST), is("Duplicate artifacts defined."));
@@ -123,5 +123,4 @@ public class ArtifactPlansTest {
         assertThat(artifactPlans.get(1).errors().on(ArtifactPlan.SRC), is("Duplicate artifacts defined."));
         assertThat(artifactPlans.get(2).errors().on(ArtifactPlan.DEST), is("Invalid destination path. Destination path should match the pattern " + FilePathTypeValidator.PATH_PATTERN));
     }
-
 }
