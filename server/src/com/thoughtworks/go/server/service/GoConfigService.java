@@ -140,7 +140,7 @@ public class GoConfigService implements Initializer {
         return new ConfigForEdit<PipelineConfig>(config, configHolder);
     }
 
-    private boolean canEditPipeline(String pipelineName, Username username, LocalizedOperationResult result) {
+    protected boolean canEditPipeline(String pipelineName, Username username, LocalizedOperationResult result) {
         if (!doesPipelineExist(pipelineName, result)) {
             return false;
         }
@@ -242,17 +242,8 @@ public class GoConfigService implements Initializer {
         goConfigDao.addAgent(agentConfig);
     }
 
-    public void updatePipeline(final PipelineConfig pipelineConfig, final Username currentUser, final LocalizedOperationResult result) {
-        goConfigDao.updatePipeline(pipelineConfig, result, new PermissionChecker() {
-            @Override
-            public boolean canContinue() {
-                return canEditPipeline(pipelineConfig.name().toString(), currentUser, result);
-            }
-        });
-    }
-
-    public interface PermissionChecker {
-        boolean canContinue();
+    public void updatePipeline(final PipelineConfig pipelineConfig, final Username currentUser, final LocalizedOperationResult result, PipelineConfigService.SaveConditions saveConditions) {
+        goConfigDao.updatePipeline(pipelineConfig, result, currentUser, saveConditions);
     }
 
     public ConfigSaveState updateConfig(UpdateConfigCommand command) {

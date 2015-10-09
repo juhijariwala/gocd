@@ -283,6 +283,22 @@ public class StageConfigTest {
     }
 
     @Test
+    public void shouldAddValidateTreeErrorsOnStageConfigIfPipelineIsAssociatedToATemplate(){
+        Approval approval = mock(Approval.class);
+        JobConfigs jobConfigs = mock(JobConfigs.class);
+        ConfigErrors jobErrors = new ConfigErrors();
+        jobErrors.add("KEY", "ERROR");
+        when(jobConfigs.errors()).thenReturn(jobErrors);
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("stage$"), jobConfigs, approval);
+
+        PipelineConfig pipelineConfig = new PipelineConfig();
+        pipelineConfig.setTemplateName(new CaseInsensitiveString("template"));
+        stageConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig, stageConfig));
+
+        assertThat(stageConfig.errors().on(StageConfig.NAME), contains("Invalid stage name 'stage$'"));
+    }
+
+    @Test
     public void shouldReturnTrueIfAllDescendentsAreValid(){
         EnvironmentVariablesConfig variables = mock(EnvironmentVariablesConfig.class);
         JobConfigs jobConfigs = mock(JobConfigs.class);

@@ -461,6 +461,27 @@ public class PipelineConfigValidationTest {
         assertThat(p3.first().getJobs().first().getTasks().first().errors().isEmpty(), is(true));
     }
 
+    @Test
+    public void shouldAddValidationErrorsFromStagesOntoPipelineIfPipelineIsAssociatedToATemplate(){
+        BasicCruiseConfig cruiseConfig = GoConfigMother.configWithPipelines("p1", "p2", "p3");
+        PipelineConfig p1 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p1"));
+        PipelineConfig p2 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p2"));
+        PipelineConfig p3 = cruiseConfig.getPipelineConfigByName(new CaseInsensitiveString("p3"));
+        p2.addMaterialConfig(new DependencyMaterialConfig(p1.name(), p1.first().name()));
+        p3.addMaterialConfig(new DependencyMaterialConfig(p2.name(), p2.first().name()));
+        p3.first().getJobs().first().addTask(new FetchTask(new CaseInsensitiveString("p1/p2"), p1.first().name(), p1.first().getJobs().first().name(), "src", "dest"));
+        PipelineConfigurationCache.getInstance().onConfigChange(cruiseConfig);
+
+        StageConfig stageConfig = new StageConfig(new CaseInsensitiveString("stage"), new JobConfigs(new JobConfig(new CaseInsensitiveString("new-job"))));
+        PipelineConfig pipelineConfig = new PipelineConfig(p1.name(), new MaterialConfigs(), stageConfig);
+        PipelineConfigSaveValidationContext validationContext = PipelineConfigSaveValidationContext.forChain(pipelineConfig);
+
+        pipelineConfig.validateTree(validationContext);
+        assertThat(pipelineConfig.errors().on("base"), is("Pipeline \"p3\" tries to fetch artifact from job \"p1 :: stage :: job\" which does not exist."));
+        p3 = PipelineConfigurationCache.getInstance().getPipelineConfig("p3");
+        assertThat(p3.first().getJobs().first().getTasks().first().errors().isEmpty(), is(true));
+    }
+
     private StageConfig getStageConfig(String stageName, String jobName) {
         JobConfig jobConfig = new JobConfig(new CaseInsensitiveString(jobName));
         jobConfig.addTask(new AntTask());

@@ -21,14 +21,13 @@ import com.thoughtworks.go.config.update.ConfigUpdateCheckFailedException;
 import com.thoughtworks.go.config.validation.GoConfigValidity;
 import com.thoughtworks.go.domain.AgentInstance;
 import com.thoughtworks.go.i18n.LocalizedMessage;
-import com.thoughtworks.go.i18n.Localizer;
 import com.thoughtworks.go.listener.ConfigChangedListener;
 import com.thoughtworks.go.metrics.domain.context.Context;
 import com.thoughtworks.go.metrics.domain.probes.ProbeType;
 import com.thoughtworks.go.metrics.service.MetricsProbeService;
 import com.thoughtworks.go.presentation.TriStateSelection;
 import com.thoughtworks.go.server.domain.Username;
-import com.thoughtworks.go.server.service.GoConfigService;
+import com.thoughtworks.go.server.service.PipelineConfigService;
 import com.thoughtworks.go.server.service.result.LocalizedOperationResult;
 import com.thoughtworks.go.util.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -174,12 +173,12 @@ public class GoConfigDao {
         return cachedConfigService.currentConfig().getMd5();
     }
 
-    public void updatePipeline(PipelineConfig pipelineConfig, LocalizedOperationResult result, GoConfigService.PermissionChecker permissionChecker) {
+    public void updatePipeline(PipelineConfig pipelineConfig, LocalizedOperationResult result, Username currentUser, PipelineConfigService.SaveConditions saveConditions) {
         synchronized (writeLock) {
-            if (permissionChecker.canContinue()) {
-                if (pipelineConfig.validateTree(PipelineConfigSaveValidationContext.forChain(pipelineConfig))) {
-                    cachedConfigService.writePipelineWithLock(pipelineConfig);
-                } else {
+            if (saveConditions.hasEditPermissions()) {
+                try {
+                    cachedConfigService.writePipelineWithLock(pipelineConfig, saveConditions, currentUser);
+                } catch (ConfigUpdateCheckFailedException e) {
                     result.unprocessableEntity(LocalizedMessage.string("PIPELINE_CONFIG_VALIDATION_FAILED", pipelineConfig.name()));
                 }
             }

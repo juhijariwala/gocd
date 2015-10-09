@@ -26,7 +26,8 @@ import com.thoughtworks.go.helper.ConfigFileFixture;
 import com.thoughtworks.go.helper.PipelineMother;
 import com.thoughtworks.go.helper.StageConfigMother;
 import com.thoughtworks.go.i18n.Localizable;
-import com.thoughtworks.go.server.service.GoConfigService;
+import com.thoughtworks.go.server.domain.Username;
+import com.thoughtworks.go.server.service.PipelineConfigService;
 import com.thoughtworks.go.server.service.result.LocalizedOperationResult;
 import com.thoughtworks.go.util.*;
 import org.apache.commons.io.FileUtils;
@@ -568,12 +569,12 @@ public abstract class GoConfigDaoTestBase {
         PipelineConfig pipelineConfig = mock(PipelineConfig.class);
         when(pipelineConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(false);
         LocalizedOperationResult result = mock(LocalizedOperationResult.class);
-        GoConfigService.PermissionChecker permissionChecker = mock(GoConfigService.PermissionChecker.class);
-        when(permissionChecker.canContinue()).thenReturn(true);
+        PipelineConfigService.SaveConditions saveConditions = mock(PipelineConfigService.SaveConditions.class);
+        when(saveConditions.hasEditPermissions()).thenReturn(true);
 
         CachedGoConfig cachedConfigService = mock(CachedGoConfig.class);
         goConfigDao = new GoConfigDao(cachedConfigService, null);
-        goConfigDao.updatePipeline(pipelineConfig, result, permissionChecker);
+        goConfigDao.updatePipeline(pipelineConfig, result, new Username(new CaseInsensitiveString("user")), saveConditions);
 
         ArgumentCaptor<PipelineConfigSaveValidationContext> contextCaptor = ArgumentCaptor.forClass(PipelineConfigSaveValidationContext.class);
         verify(pipelineConfig).validateTree(contextCaptor.capture());
@@ -587,16 +588,17 @@ public abstract class GoConfigDaoTestBase {
         PipelineConfig pipelineConfig = mock(PipelineConfig.class);
         when(pipelineConfig.validateTree(Matchers.<PipelineConfigSaveValidationContext>any())).thenReturn(true);
         LocalizedOperationResult result = mock(LocalizedOperationResult.class);
-        GoConfigService.PermissionChecker permissionChecker = mock(GoConfigService.PermissionChecker.class);
-        when(permissionChecker.canContinue()).thenReturn(true);
+        PipelineConfigService.SaveConditions saveConditions = mock(PipelineConfigService.SaveConditions.class);
+        when(saveConditions.hasEditPermissions()).thenReturn(true);
 
         CachedGoConfig cachedConfigService = mock(CachedGoConfig.class);
         goConfigDao = new GoConfigDao(cachedConfigService, null);
-        goConfigDao.updatePipeline(pipelineConfig, result, permissionChecker);
+        Username currentUser = new Username(new CaseInsensitiveString("user"));
+        goConfigDao.updatePipeline(pipelineConfig, result, currentUser, saveConditions);
 
         verify(pipelineConfig).validateTree(Matchers.<PipelineConfigSaveValidationContext>any());
         verifyZeroInteractions(result);
-        verify(cachedConfigService).writePipelineWithLock(pipelineConfig);
+        verify(cachedConfigService).writePipelineWithLock(pipelineConfig, saveConditions, currentUser);
     }
 
     private void assertCurrentConfigIs(CruiseConfig cruiseConfig) throws Exception {

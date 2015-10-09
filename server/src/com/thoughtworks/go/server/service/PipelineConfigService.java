@@ -16,10 +16,7 @@
 
 package com.thoughtworks.go.server.service;
 
-import com.thoughtworks.go.config.CaseInsensitiveString;
-import com.thoughtworks.go.config.CruiseConfig;
-import com.thoughtworks.go.config.PipelineConfig;
-import com.thoughtworks.go.config.PipelineConfigurationCache;
+import com.thoughtworks.go.config.*;
 import com.thoughtworks.go.i18n.LocalizedMessage;
 import com.thoughtworks.go.listener.PipelineConfigChangedListener;
 import com.thoughtworks.go.server.cache.GoCache;
@@ -90,16 +87,35 @@ public class PipelineConfigService implements PipelineConfigChangedListener, Ini
     }
 
     public PipelineConfig getPipelineConfig(String pipelineName) {
-        return PipelineConfigurationCache.getInstance().getPipelineConfig(pipelineName);
+        return goConfigService.getConfigForEditing().getPipelineConfigByName(new CaseInsensitiveString(pipelineName));
     }
 
-    public void updatePipelineConfig(Username currentUser, PipelineConfig pipelineConfig, LocalizedOperationResult result) {
+    public void updatePipelineConfig(final Username currentUser, final PipelineConfig pipelineConfig, final LocalizedOperationResult result) {
         try {
-            goConfigService.updatePipeline(pipelineConfig, currentUser, result);
+            goConfigService.updatePipeline(pipelineConfig, currentUser, result, new SaveConditions<PipelineConfig>() {
+                @Override
+                public boolean isValid(PipelineConfig preprocessedConfig) {
+                    boolean isValid = preprocessedConfig.validateTree(PipelineConfigSaveValidationContext.forChain(preprocessedConfig));
+                    if (!isValid) BasicCruiseConfig.copyErrors(preprocessedConfig, pipelineConfig);
+                    return isValid;
+                }
+
+                @Override
+                public boolean hasEditPermissions() {
+                    return goConfigService.canEditPipeline(pipelineConfig.name().toString(), currentUser, result);
+                }
+            });
         } catch (Exception e) {
             result.internalServerError(LocalizedMessage.string("SAVE_FAILED_WITH_REASON", e.getMessage()));
         }
     }
+
+    public interface SaveConditions<T extends Validatable>{
+        boolean isValid(T object);
+
+        boolean hasEditPermissions();
+    }
+
 
     @Override
     public void onPipelineConfigChange(PipelineConfig pipelineConfig, String group) {

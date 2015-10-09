@@ -65,17 +65,17 @@ module ApiV1
       raise BadRequest.new(e.message)
     end
 
-    def render_http_operation_result(result)
+    def render_http_operation_result(result, data = {})
       status = result.httpCode()
       if result.instance_of?(HttpOperationResult)
-        render_message(result.detailedMessage(), status)
+        render_message(result.detailedMessage(), status, data)
       else
-        render_message(result.message(Spring.bean('localizer')), status)
+        render_message(result.message(Spring.bean('localizer')), status, data)
       end
     end
 
-    def render_message(message, status)
-      render json_hal_v1: { message: message.strip }, status: status
+    def render_message(message, status, data = {})
+      render json_hal_v1: { message: message.strip }.merge(data), status: status
     end
 
     def render_unprocessable_entity_error(exception)

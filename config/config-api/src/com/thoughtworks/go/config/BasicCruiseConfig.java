@@ -1388,23 +1388,4 @@ public class BasicCruiseConfig implements CruiseConfig {
             }
         }
     }
-
-    private static abstract class ErrorCollectingHandler implements GoConfigGraphWalker.Handler {
-        private final List<ConfigErrors> allErrors;
-
-        public ErrorCollectingHandler(List<ConfigErrors> allErrors) {
-            this.allErrors = allErrors;
-        }
-
-        public void handle(Validatable validatable, ValidationContext context) {
-            handleValidation(validatable, context);
-            ConfigErrors configErrors = validatable.errors();
-
-            if (!configErrors.isEmpty()) {
-                allErrors.add(configErrors);
-            }
-        }
-
-        public abstract void handleValidation(Validatable validatable, ValidationContext context);
-    }
 }

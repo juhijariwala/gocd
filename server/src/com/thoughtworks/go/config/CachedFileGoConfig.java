@@ -22,6 +22,8 @@ import java.util.List;
 import com.thoughtworks.go.config.validation.GoConfigValidity;
 import com.thoughtworks.go.listener.ConfigChangedListener;
 import com.thoughtworks.go.listener.PipelineConfigChangedListener;
+import com.thoughtworks.go.server.domain.Username;
+import com.thoughtworks.go.server.service.PipelineConfigService;
 import com.thoughtworks.go.serverhealth.HealthStateType;
 import com.thoughtworks.go.serverhealth.ServerHealthService;
 import com.thoughtworks.go.serverhealth.ServerHealthState;
@@ -139,13 +141,13 @@ public class CachedFileGoConfig implements CachedGoConfig {
         return saveResult.getConfigSaveState();
     }
 
-    public synchronized void writePipelineWithLock(PipelineConfig pipelineConfig) {
+    public synchronized void writePipelineWithLock(PipelineConfig pipelineConfig, PipelineConfigService.SaveConditions saveConditions, Username currentUser) {
         GoConfigHolder serverCopy = new GoConfigHolder(currentConfig, currentConfigForEdit);
-        writePipelineWithLock(pipelineConfig, serverCopy);
+        writePipelineWithLock(pipelineConfig, serverCopy, saveConditions, currentUser);
     }
 
-    public synchronized PipelineConfigSaveResult writePipelineWithLock(PipelineConfig pipelineConfig, GoConfigHolder serverCopy) {
-        PipelineConfigSaveResult saveResult = dataSource.writePipelineWithLock(pipelineConfig, serverCopy);
+    public synchronized PipelineConfigSaveResult writePipelineWithLock(PipelineConfig pipelineConfig, GoConfigHolder serverCopy, PipelineConfigService.SaveConditions saveConditions, Username currentUser) {
+        PipelineConfigSaveResult saveResult = dataSource.writePipelineWithLock(pipelineConfig, serverCopy, saveConditions, currentUser);
         saveValidConfigToCacheAndNotifyPipelineConfigChangeListeners(saveResult);
         return saveResult;
     }

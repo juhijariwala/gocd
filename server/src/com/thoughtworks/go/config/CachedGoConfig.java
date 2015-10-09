@@ -18,6 +18,8 @@ package com.thoughtworks.go.config;
 
 import com.thoughtworks.go.config.validation.GoConfigValidity;
 import com.thoughtworks.go.listener.ConfigChangedListener;
+import com.thoughtworks.go.server.domain.Username;
+import com.thoughtworks.go.server.service.PipelineConfigService;
 
 public interface CachedGoConfig {
     CruiseConfig loadForEditing();
@@ -30,7 +32,7 @@ public interface CachedGoConfig {
 
     ConfigSaveState writeWithLock(UpdateConfigCommand updateConfigCommand);
 
-    void writePipelineWithLock(PipelineConfig pipelineConfig);
+    void writePipelineWithLock(PipelineConfig pipelineConfig, PipelineConfigService.SaveConditions saveConditions, Username currentUser);
 
     String getFileLocation();
 

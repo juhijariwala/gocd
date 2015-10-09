@@ -19,18 +19,19 @@ package com.thoughtworks.go.config;
 import com.rits.cloning.Cloner;
 import com.thoughtworks.go.config.exceptions.*;
 import com.thoughtworks.go.config.registry.ConfigElementImplementationRegistry;
+import com.thoughtworks.go.config.update.ConfigUpdateCheckFailedException;
+import com.thoughtworks.go.domain.ConfigErrors;
 import com.thoughtworks.go.domain.GoConfigRevision;
 import com.thoughtworks.go.metrics.service.MetricsProbeService;
+import com.thoughtworks.go.server.domain.Username;
+import com.thoughtworks.go.server.service.PipelineConfigService;
 import com.thoughtworks.go.server.util.ServerVersion;
 import com.thoughtworks.go.serverhealth.HealthStateScope;
 import com.thoughtworks.go.serverhealth.HealthStateType;
 import com.thoughtworks.go.serverhealth.ServerHealthService;
 import com.thoughtworks.go.serverhealth.ServerHealthState;
 import com.thoughtworks.go.service.ConfigRepository;
-import com.thoughtworks.go.util.CachedDigestUtils;
-import com.thoughtworks.go.util.FileUtil;
-import com.thoughtworks.go.util.SystemEnvironment;
-import com.thoughtworks.go.util.TimeProvider;
+import com.thoughtworks.go.util.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -41,6 +42,8 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.thoughtworks.go.util.ExceptionUtils.bomb;
 import static java.lang.String.format;
@@ -211,22 +214,27 @@ public class GoFileConfigDataSource {
         }
     }
 
-    public synchronized CachedFileGoConfig.PipelineConfigSaveResult writePipelineWithLock(PipelineConfig pipelineConfig, GoConfigHolder serverCopy) {
+    public synchronized CachedFileGoConfig.PipelineConfigSaveResult writePipelineWithLock(PipelineConfig pipelineConfig, GoConfigHolder serverCopy, PipelineConfigService.SaveConditions saveConditions, Username currentUser) {
         CruiseConfig modifiedConfig = cloner.deepClone(serverCopy.configForEdit);
         String pipelineName = pipelineConfig.name().toString();
         String pipelineGroup = modifiedConfig.findGroupOfPipeline(pipelineConfig).getGroup();
         modifiedConfig.update(pipelineGroup, pipelineName, pipelineConfig);
-        try {
-            LOGGER.info(String.format("[Configuration Changed] Saving updated configuration."));
-            String configAsXml = configAsXml(modifiedConfig, true);
-            writeToConfigXmlFile(configAsXml);
-            configRepository.checkin(new GoConfigRevision(configAsXml, CachedDigestUtils.md5Hex(configAsXml), "somebody", serverVersion.version(), timeProvider));
-            LOGGER.debug("[Config Save] Done writing with lock");
-            CruiseConfig preprocessedConfig = cloner.deepClone(modifiedConfig);
-            MagicalGoConfigXmlLoader.preprocess(preprocessedConfig);
-            return new CachedFileGoConfig.PipelineConfigSaveResult(pipelineConfig, pipelineGroup, new GoConfigHolder(preprocessedConfig, modifiedConfig));
-        } catch (Exception e) {
-            throw new RuntimeException("failed to save : " + e.getMessage());
+        CruiseConfig preprocessedConfig = cloner.deepClone(modifiedConfig);
+        MagicalGoConfigXmlLoader.preprocess(preprocessedConfig);
+        PipelineConfig preprocessedPipelineConfig = preprocessedConfig.getPipelineConfigByName(pipelineConfig.name());
+        if (saveConditions.isValid(preprocessedPipelineConfig)) {
+            try {
+                LOGGER.info(String.format("[Configuration Changed] Saving updated configuration."));
+                String configAsXml = configAsXml(modifiedConfig, true);
+                writeToConfigXmlFile(configAsXml);
+                configRepository.checkin(new GoConfigRevision(configAsXml, CachedDigestUtils.md5Hex(configAsXml), currentUser.getUsername().toString(), serverVersion.version(), timeProvider));
+                LOGGER.debug("[Config Save] Done writing with lock");
+                return new CachedFileGoConfig.PipelineConfigSaveResult(pipelineConfig, pipelineGroup, new GoConfigHolder(preprocessedConfig, modifiedConfig));
+            } catch (Exception e) {
+                throw new RuntimeException("failed to save : " + e.getMessage());
+            }
+        } else {
+            throw new ConfigUpdateCheckFailedException();
         }
     }
 

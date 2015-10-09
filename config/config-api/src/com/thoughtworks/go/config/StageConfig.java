@@ -16,14 +16,14 @@
 
 package com.thoughtworks.go.config;
 
-import java.util.List;
-import java.util.Map;
-
 import com.thoughtworks.go.config.preprocessor.SkipParameterResolution;
 import com.thoughtworks.go.config.validation.NameTypeValidator;
 import com.thoughtworks.go.domain.ConfigErrors;
 import com.thoughtworks.go.service.TaskFactory;
 import com.thoughtworks.go.util.GoConstants;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @understands the configuration for a stage

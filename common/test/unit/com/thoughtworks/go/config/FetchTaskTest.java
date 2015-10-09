@@ -203,7 +203,7 @@ public class FetchTaskTest {
         } else {
             task.setSrcfile(source);
         }
-        task.validate(ConfigSaveValidationContext.forChain(upstream, stage, job));
+        task.validate(ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(),upstream, stage, job));
 
         assertThat(task.errors().isEmpty(), is(false));
         String path = propertyName.equals(FetchTask.SRC) ? source : destination;
@@ -445,7 +445,7 @@ public class FetchTaskTest {
     public void shouldPopulateErrorOnSrcFileOrSrcDirOrDestIfIsNotAValidFilePathPattern() {
         FetchTask task = new FetchTask(new CaseInsensitiveString("upstream"), new CaseInsensitiveString("stage"), new CaseInsensitiveString("job"), "..", "..");
         StageConfig stage = upstream.getStage(new CaseInsensitiveString("stage"));
-        ValidationContext context = ConfigSaveValidationContext.forChain(config, upstream, stage, stage.getJobs().first());
+        ValidationContext context = ConfigSaveValidationContext.forChain(config, new BasicPipelineConfigs(), upstream, stage, stage.getJobs().first());
         task.validate(context);
         assertThat(task.errors().isEmpty(), is(false));
         assertThat(task.errors().on(FetchTask.SRC), is("Task of job 'job' in stage 'stage' of pipeline 'upstream' has src path '..' which is outside the working directory."));

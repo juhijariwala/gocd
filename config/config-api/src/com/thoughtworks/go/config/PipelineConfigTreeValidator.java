@@ -2,13 +2,15 @@ package com.thoughtworks.go.config;
 
 import com.rits.cloning.Cloner;
 import com.thoughtworks.go.config.materials.dependency.DependencyMaterialConfig;
+import com.thoughtworks.go.domain.ConfigErrors;
 import com.thoughtworks.go.domain.Task;
 import com.thoughtworks.go.domain.materials.MaterialConfig;
-import com.thoughtworks.go.util.DFSCycleDetector;
-import com.thoughtworks.go.util.Node;
-import com.thoughtworks.go.util.PipelineDependencyState;
+import com.thoughtworks.go.util.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 public class PipelineConfigTreeValidator {
     private final PipelineConfig pipelineConfig;
@@ -36,6 +38,17 @@ public class PipelineConfigTreeValidator {
 
         for (StageConfig stageConfig : pipelineConfig.getStages()) {
             isValid = stageConfig.validateTree(contextForChildren) && isValid;
+            if(pipelineConfig.hasTemplateApplied()){
+                final List<ConfigErrors> allErrors = new ArrayList<>();
+                new GoConfigGraphWalker(stageConfig).walk(new ErrorCollectingHandler(allErrors) {
+                    @Override
+                    public void handleValidation(Validatable validatable, ValidationContext context) {
+                    }
+                });
+                for (ConfigErrors error : allErrors) {
+                    pipelineConfig.errors().add("template", ListUtil.join(error.getAll()));
+                }
+            }
         }
         validateCyclicDependencies(validationContext);
         isValid = pipelineConfig.materialConfigs().validateTree(contextForChildren) && isValid;

@@ -25,6 +25,8 @@ import com.thoughtworks.go.config.validation.GoConfigValidity;
 import com.thoughtworks.go.domain.ConfigErrors;
 import com.thoughtworks.go.listener.ConfigChangedListener;
 import com.thoughtworks.go.listener.PipelineConfigChangedListener;
+import com.thoughtworks.go.server.domain.Username;
+import com.thoughtworks.go.server.service.PipelineConfigService;
 import com.thoughtworks.go.serverhealth.HealthStateType;
 import com.thoughtworks.go.serverhealth.ServerHealthService;
 import com.thoughtworks.go.serverhealth.ServerHealthState;
@@ -154,8 +156,8 @@ public class MergedGoConfig implements CachedGoConfig, PipelineConfigChangedList
     }
 
     @Override
-    public synchronized void writePipelineWithLock(PipelineConfig pipelineConfig) {
-        CachedFileGoConfig.PipelineConfigSaveResult saveResult = fileService.writePipelineWithLock(pipelineConfig, new GoConfigHolder(this.currentConfig, this.currentConfigForEdit));
+    public synchronized void writePipelineWithLock(PipelineConfig pipelineConfig, PipelineConfigService.SaveConditions saveConditions, Username currentUser) {
+        CachedFileGoConfig.PipelineConfigSaveResult saveResult = fileService.writePipelineWithLock(pipelineConfig, this.configHolder, saveConditions, currentUser);
         saveValidConfigToCacheAndNotifyPipelineConfigChangeListeners(saveResult);
     }
 
