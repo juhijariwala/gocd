@@ -1,5 +1,5 @@
-/*************************GO-LICENSE-START*********************************
- * Copyright 2014 ThoughtWorks, Inc.
+/*
+ * Copyright 2015 ThoughtWorks, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *************************GO-LICENSE-END***********************************/
+ */
 
 package com.thoughtworks.go.domain;
 
@@ -36,8 +36,8 @@ public class ArtifactPlansTest {
     public void shouldAddDuplicatedArtifactSoThatValidationKicksIn() throws Exception {
         final ArtifactPlans artifactPlans = new ArtifactPlans();
         assertThat(artifactPlans.size(), is(0));
-        artifactPlans.add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
-        artifactPlans.add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
+        artifactPlans.add(new ArtifactPlan("src", "dest"));
+        artifactPlans.add(new ArtifactPlan("src", "dest"));
         assertThat(artifactPlans.size(), is(2));
     }
 
@@ -64,7 +64,7 @@ public class ArtifactPlansTest {
         plan.setSrc("blah");
         plan.setDest("something");
         assertThat((TestArtifactPlan) artifactPlans.get(0), is(plan));
-        assertThat(artifactPlans.get(1), is(new ArtifactPlan(ArtifactType.file, "blah2", "something2")));
+        assertThat(artifactPlans.get(1), is(new ArtifactPlan("blah2", "something2")));
     }
 
     @Test
@@ -96,13 +96,13 @@ public class ArtifactPlansTest {
         plan.setSrc("blah");
         plan.setDest("something");
         assertThat((TestArtifactPlan) artifactPlans.get(0), is(plan));
-        assertThat(artifactPlans.get(1), is(new ArtifactPlan(ArtifactType.file, "blah2", "something2")));
+        assertThat(artifactPlans.get(1), is(new ArtifactPlan("blah2", "something2")));
     }
 
     @Test
     public void shouldClearAllArtifactsWhenTheMapIsNull() {
         ArtifactPlans artifactPlans = new ArtifactPlans();
-        artifactPlans.add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
+        artifactPlans.add(new ArtifactPlan("src", "dest"));
 
         artifactPlans.setConfigAttributes(null);
 
@@ -112,9 +112,9 @@ public class ArtifactPlansTest {
     @Test
     public void shouldValidateTree(){
         ArtifactPlans artifactPlans = new ArtifactPlans();
-        artifactPlans.add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
-        artifactPlans.add(new ArtifactPlan(ArtifactType.file, "src", "dest"));
-        artifactPlans.add(new ArtifactPlan(ArtifactType.file, "src", "../a"));
+        artifactPlans.add(new ArtifactPlan("src", "dest"));
+        artifactPlans.add(new ArtifactPlan("src", "../a"));
+        artifactPlans.add(new ArtifactPlan("src", "dest"));
 
         artifactPlans.validateTree(null);
         assertThat(artifactPlans.get(0).errors().on(ArtifactPlan.DEST), is("Duplicate artifacts defined."));
@@ -123,6 +123,5 @@ public class ArtifactPlansTest {
         assertThat(artifactPlans.get(1).errors().on(ArtifactPlan.SRC), is("Duplicate artifacts defined."));
         assertThat(artifactPlans.get(2).errors().on(ArtifactPlan.DEST), is("Invalid destination path. Destination path should match the pattern " + FilePathTypeValidator.PATH_PATTERN));
     }
-
 
 }
