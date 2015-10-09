@@ -578,10 +578,10 @@ public abstract class GoConfigDaoTestBase {
         ArgumentCaptor<PipelineConfigSaveValidationContext> contextCaptor = ArgumentCaptor.forClass(PipelineConfigSaveValidationContext.class);
         verify(pipelineConfig).validateTree(contextCaptor.capture());
         assertThat(contextCaptor.getValue().getPipeline(), is(pipelineConfig));
-        verify(result).notAcceptable(Matchers.<Localizable>any());
+        verify(result).unprocessableEntity(Matchers.<Localizable>any());
         verifyZeroInteractions(cachedConfigService);
     }
-    
+
     @Test
     public void shouldUpdateValidPipelineConfig(){
         PipelineConfig pipelineConfig = mock(PipelineConfig.class);
