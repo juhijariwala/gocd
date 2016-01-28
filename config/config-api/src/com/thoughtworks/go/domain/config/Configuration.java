@@ -16,17 +16,13 @@
 
 package com.thoughtworks.go.domain.config;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.thoughtworks.go.config.ConfigCollection;
 import com.thoughtworks.go.config.ConfigTag;
 import com.thoughtworks.go.domain.BaseCollection;
 import com.thoughtworks.go.util.ListUtil;
 import com.thoughtworks.go.util.StringUtil;
+
+import java.util.*;
 
 import static java.lang.String.format;
 

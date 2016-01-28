@@ -16,28 +16,25 @@
 
 package com.thoughtworks.go.domain.config;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import javax.annotation.PostConstruct;
-
 import com.thoughtworks.go.config.ConfigSaveValidationContext;
-import com.thoughtworks.go.security.GoCipher;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageConfiguration;
 import com.thoughtworks.go.plugin.access.packagematerial.PackageConfigurations;
+import com.thoughtworks.go.security.GoCipher;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.util.ReflectionUtils;
+
+import javax.annotation.PostConstruct;
+import java.lang.reflect.Method;
+import java.util.HashMap;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class ConfigurationPropertyTest {
 
@@ -311,5 +308,29 @@ public class ConfigurationPropertyTest {
     public void shouldGetMaskedStringIfConfigurationPropertyIsSecure() throws Exception {
         assertThat(new ConfigurationProperty(new ConfigurationKey("key"), new EncryptedConfigurationValue("value")).getDisplayValue(), is("****"));
         assertThat(new ConfigurationProperty(new ConfigurationKey("key"), new ConfigurationValue("value")).getDisplayValue(), is("value"));
+    }
+
+    @Test
+    public void shouldSetConfigurationValueWithGivenString() throws Exception {
+        ConfigurationProperty configurationProperty = new ConfigurationProperty();
+        configurationProperty.setConfigValue("value");
+
+        assertThat(configurationProperty.getConfigValue(),is ("value"));
+    }
+
+    @Test
+    public void shouldSetConfigurationKeyWithGivenString() throws Exception {
+        ConfigurationProperty configurationProperty = new ConfigurationProperty();
+        configurationProperty.setConfigKeyName("key");
+
+        assertThat(configurationProperty.getConfigKeyName(), is("key"));
+    }
+
+    @Test
+    public void shouldSetEncryptedConfigurationValueWithGivenString() throws Exception {
+        ConfigurationProperty configurationProperty = new ConfigurationProperty();
+        configurationProperty.setEncryptedValue("encrypted value");
+
+        assertThat(configurationProperty.getEncryptedValue().getValue(), is("encrypted value"));
     }
 }
